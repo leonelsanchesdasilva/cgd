@@ -28,7 +28,7 @@ Iniciado: 11 de agosto de 2025
 
 ### Funcionalidades implementadas
 
-- [ ] Lexer básico
+- [X] Lexer básico
   - [ ] Lexer completo
 - [ ] Parser básico
   - [ ] Parser completo

@@ -25,7 +25,7 @@ private:
     static immutable TokenType[string] SINGLE_CHAR_TOKENS = initSingleCharTokens();
     static immutable TokenType[string] MULTI_CHAR_TOKENS = initMultiCharTokens();
     static immutable bool[char] ALPHA_CHARS = initCharSet(
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_");
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_áÁãÃâÂàÀéÉêÊíÍóÓõÕôÔúÚçÇ");
     static immutable bool[char] DIGIT_CHARS = initCharSet("0123456789");
     static immutable bool[char] HEX_CHARS = initCharSet("0123456789abcdefABCDEF");
     static immutable bool[char] OCTAL_CHARS = initCharSet("01234567");
