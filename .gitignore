@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/dgc
+dgc.so
+dgc.dylib
+dgc.dll
+dgc.a
+dgc.lib
+dgc-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

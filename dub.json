@@ -1,0 +1,9 @@
+{
+	"authors": [
+		"Fernando Dev"
+	],
+	"copyright": "Copyright © 2025, Fernando Dev",
+	"description": "Delaegua General Compiler",
+	"license": "MIT",
+	"name": "dgc"
+}
