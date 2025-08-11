@@ -1,6 +1,6 @@
-# DGC - Delaegua General Compiler
+# DGC - Delegua General Compiler
 
-Compilador para a linguagem de programação [Delaegua](https://github.com/DesignLiquido/delegua).
+Compilador para a linguagem de programação [Delegua](https://github.com/DesignLiquido/delegua).
 
 ## Plataformas suportadas
 
@@ -12,7 +12,7 @@ Compilador para a linguagem de programação [Delaegua](https://github.com/Desig
 
 O processo de compilação segue o pipeline:
 
-1. **Análise léxica e sintática** - Processa código Delaegua
+1. **Análise léxica e sintática** - Processa código Delegua
 2. **Geração de código** - Transpila para código D
 3. **Compilação nativa** - Utiliza LDC para gerar binário final
 
