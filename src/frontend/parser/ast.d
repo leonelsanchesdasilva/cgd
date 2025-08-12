@@ -16,6 +16,8 @@ enum NodeType
     Identifier,
 
     VariableDeclaration,
+    ReturnStatement,
+    FunctionDeclaration,
 
     IntLiteral,
     FloatLiteral,
@@ -260,36 +262,52 @@ class AddressOfExpr : Stmt
 
 // FunctionDeclaration
 
-// class FunctionArg
-// {
-//     Identifier id;
-//     FTypeInfo type;
-//     NullStmt def; // Default, like: fn fernando(x: int = 10) {}
+class FunctionArg
+{
+    Identifier id;
+    FTypeInfo type;
+    Nullable!Stmt def; // Default, like: function fernando(x: int = 10) {}
 
-//     this(Identifier id, FTypeInfo type, NullStmt def = null)
-//     {
-//         this.id = id;
-//         this.type = type;
-//         this.def = def;
-//     }
-// }
+    this(Identifier id, FTypeInfo type, Nullable!Stmt def = null)
+    {
+        this.id = id;
+        this.type = type;
+        this.def = def;
+    }
+}
 
-// alias FunctionArgs = FunctionArg[];
+alias FunctionArgs = FunctionArg[];
 
-// class FunctionDeclaration : Stmt
-// {
-//     Identifier id;
-//     FunctionArgs args;
-//     Stmt[] block;
-//     SymbolInfo[string] context;
+class FunctionDeclaration : Stmt
+{
+    Identifier id;
+    FunctionArgs args;
+    Stmt[] block;
+    SymbolInfo[string] context;
 
-//     this(Identifier id, FunctionArgs args, Stmt[] block, FTypeInfo type, Loc loc)
-//     {
-//         this.id = id;
-//         this.args = args;
-//         this.block = block;
-//         this.loc = loc;
-//         this.type = type;
-//         this.value = null;
-//     }
-// }
+    this(Identifier id, FunctionArgs args, Stmt[] block, FTypeInfo type, Loc loc)
+    {
+        this.id = id;
+        this.args = args;
+        this.kind = NodeType.FunctionDeclaration;
+        this.block = block;
+        this.loc = loc;
+        this.type = type;
+        this.value = null;
+    }
+}
+
+class ReturnStatement : Stmt
+{
+
+    Stmt expr;
+
+    this(Stmt expr, Loc loc)
+    {
+        this.kind = NodeType.ReturnStatement;
+        this.expr = expr;
+        this.value = null;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL);
+    }
+}

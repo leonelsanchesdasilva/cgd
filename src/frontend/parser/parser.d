@@ -66,6 +66,10 @@ private:
             // Keywords
         case TokenType.VAR:
             return parseVarDeclaration();
+        case TokenType.RETORNA:
+            return this.parseReturnStatement();
+        case TokenType.FUNCAO:
+            return this.parseFnStatement();
 
             // Others
         case TokenType.IDENTIFIER:
@@ -76,8 +80,92 @@ private:
 
         default:
             token.print();
-            throw new Exception("No prefix parse function for " ~ to!string(token));
+            throw new Exception("Noo prefix parse function for " ~ to!string(token));
         }
+    }
+
+    Stmt parseFnStatement()
+    {
+        Token start = this.previous();
+        Token id = this.consume(TokenType.IDENTIFIER, "Esperava-se um identificador para o nome da função.");
+        FunctionArgs args = this.parseFnArguments();
+        FTypeInfo returnType = createTypeInfo(TypesNative.VOID);
+
+        if (this.match([TokenType.COLON]))
+        {
+            Token[] fnTokens;
+            while (this.peek().kind != TokenType.LBRACE)
+            {
+                fnTokens ~= this.advance();
+            }
+            returnType = new ParseType(fnTokens).parse();
+        }
+
+        this.consume(TokenType.LBRACE, "Expect '{' before function body.");
+        Stmt[] block;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            block ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Token end = this.consume(
+            TokenType.RBRACE,
+            "Expect '}' after function body.",
+        );
+
+        return new FunctionDeclaration(new Identifier(id.value.get!string, id.loc), args, block, returnType, this
+                .makeLoc(
+                    start.loc, end.loc));
+    }
+
+    FunctionArgs parseFnArguments()
+    {
+        FunctionArgs args;
+        this.consume(TokenType.LPAREN, "Esperava-se '(' após o nome da função.");
+        while (this.peek().kind != TokenType.RPAREN)
+        {
+            Token argToken = this.consume(TokenType.IDENTIFIER,
+                "Esperava-se um identificador para o nome do argumento.");
+            Identifier argId = new Identifier(argToken.value.get!string, argToken.loc);
+            FTypeInfo argType = createTypeInfo(TypesNative.ID);
+            NullStmt def = null;
+
+            this.consume(TokenType.COLON, "Esperava-se ':' após o nome do argumento para tipagem.");
+
+            // Parse the type of argument
+            Token[] argTokens;
+            while (this.peek().kind != TokenType.EQUALS && this.peek()
+                .kind != TokenType.COMMA && this.peek().kind != TokenType.RPAREN)
+            {
+                argTokens ~= this.advance();
+            }
+
+            argType = new ParseType(argTokens).parse();
+            if (this.match([TokenType.EQUALS]))
+            {
+                def = this.parseExpression(Precedence.LOWEST);
+            }
+
+            args ~= new FunctionArg(argId, argType, def);
+
+            if (this.peek().kind == TokenType.COMMA)
+            {
+                this.advance(); // skip ','
+            }
+            else if (this.peek().kind != TokenType.RPAREN)
+            {
+                throw new Error("Esperava-se ',' ou ')' após o(s) argumento(s).");
+            }
+        }
+        this.consume(TokenType.RPAREN, "Esperava-se ')' após o(s) argumento(s).");
+        return args;
+    }
+
+    Stmt parseReturnStatement()
+    {
+        Stmt expr = this.parseExpression(Precedence.LOWEST);
+        return new ReturnStatement(expr, this.previous().loc);
     }
 
     Stmt parseCallExpression()

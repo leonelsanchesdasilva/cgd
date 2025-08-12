@@ -4,6 +4,7 @@ import frontend.lexer.lexer;
 import frontend.lexer.token;
 import frontend.parser.parser;
 import frontend.parser.ast;
+import middle.semantic;
 
 void main(string[] args)
 {
@@ -31,11 +32,21 @@ void main(string[] args)
 
 	Parser parser = new Parser(tokens);
 	Program program = parser.parse();
+	writeln("Body: ", program.body);
 
 	foreach (Stmt stmt; program.body)
 	{
 		writeln("Kind: ", stmt.kind);
 		writeln("Value: ", stmt.value);
 		writeln("Line: ", stmt.loc.line, "\n");
+	}
+
+	Program newProgram = new Semantic().semantic(program);
+
+	foreach (Stmt stmt; newProgram.body)
+	{
+		writeln("S Kind: ", stmt.kind);
+		writeln("S Value: ", stmt.value);
+		writeln("S Line: ", stmt.loc.line, "\n");
 	}
 }
