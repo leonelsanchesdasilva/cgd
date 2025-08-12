@@ -1,0 +1,4 @@
+função sum(x: inteiro, y: inteiro) {
+    retorna x + y
+}
+var resultado = sum(60, 9)

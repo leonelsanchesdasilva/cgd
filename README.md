@@ -32,7 +32,8 @@ Iniciado: 11 de agosto de 2025
   - [ ] Lexer completo
 - [X] Parser básico
   - [ ] Parser completo
-- [ ] Analisador semântico
+- [X] Analisador semântico básico
+  - [ ] Analisador semântico completo
 - [ ] Otimizador
 - [ ] Gerador de código D
 

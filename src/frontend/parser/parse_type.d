@@ -93,15 +93,17 @@ private:
         switch (value)
         {
         case "int":
-        case "i32":
+        case "inteiro":
             return TypesNative.INT;
         case "float":
             return TypesNative.FLOAT;
         case "string":
+        case "texto":
             return TypesNative.STRING;
         case "void":
             return TypesNative.VOID;
         case "null":
+        case "nulo":
             return TypesNative.NULL;
         case "bool":
             return TypesNative.BOOL;

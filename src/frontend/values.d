@@ -1,6 +1,6 @@
 module frontend.values;
 
-enum TypesNative
+enum TypesNative : string
 {
     STRING = "string",
     INT = "int",
@@ -9,5 +9,5 @@ enum TypesNative
     VOID = "void",
     CHAR = "char",
     NULL = "null",
-    ID = "id" // Para identificadores (tipo ainda não conhecido)
+    ID = "auto" // Para identificadores (tipo ainda não conhecido)
 }

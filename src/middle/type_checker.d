@@ -40,20 +40,14 @@ class TypeChecker
 
     private void initializeTypeMap()
     {
-        typeMap["int"] = "i32";
-        typeMap["i32"] = "i32";
-        typeMap["i64"] = "i64";
-        typeMap["long"] = "i128";
-        typeMap["i128"] = "i128";
+        typeMap["int"] = "int";
+        typeMap["long"] = "long";
         typeMap["float"] = "double";
         typeMap["double"] = "double";
         typeMap["string"] = "string";
         typeMap["bool"] = "bool";
-        typeMap["binary"] = "i32";
-        typeMap["null"] = "ptr";
-        typeMap["ptr"] = "ptr";
-        typeMap["id"] = "void";
-        typeMap["void*"] = "void*";
+        typeMap["null"] = "null";
+        typeMap["id"] = "auto";
         typeMap["void"] = "void";
     }
 
@@ -99,7 +93,7 @@ class TypeChecker
     public bool isNumericType(string type)
     {
         string[] numericTypes = [
-            "int", "i32", "i64", "long", "float", "double", "binary"
+            "int", "i32", "i64", "long", "float", "double", "binary", "id", "auto"
         ];
         return numericTypes.canFind(type);
     }
@@ -286,7 +280,7 @@ class TypeChecker
     {
         try
         {
-            if (!targetType.canFind("i8"))
+            if (!targetType.canFind("string"))
             {
                 auto numValue = value.get!double();
                 if (!isNaN(numValue))
