@@ -30,7 +30,7 @@ Iniciado: 11 de agosto de 2025
 
 - [X] Lexer básico
   - [ ] Lexer completo
-- [ ] Parser básico
+- [X] Parser básico
   - [ ] Parser completo
 - [ ] Analisador semântico
 - [ ] Otimizador
