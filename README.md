@@ -29,13 +29,20 @@ Iniciado: 11 de agosto de 2025
 ### Funcionalidades implementadas
 
 - [X] Lexer básico
-  - [ ] Lexer completo
+  - [X] Lexer completo
 - [X] Parser básico
   - [ ] Parser completo
 - [X] Analisador semântico básico
   - [ ] Analisador semântico completo
 - [ ] Otimizador
-- [ ] Gerador de código D
+- [X] Gerador de código D
+- [ ] Geração do binário
+- [ ] Criação de bibliotecas
+  - [ ] io
+  - [ ] math
+  - [ ] http
+  - [ ] json
+  - [ ] cripto
 
 ### Próximos passos
 
