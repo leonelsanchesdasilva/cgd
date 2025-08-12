@@ -2,12 +2,15 @@ module middle.type_checker;
 
 import std.string;
 import std.conv;
+import std.math : isNaN;
 import std.exception;
 import std.algorithm;
 import frontend.lexer.token;
 import frontend.parser.ast;
 import frontend.values;
 import middle.semantic;
+import frontend.parser.ftype_info;
+import std.variant;
 
 class TypeChecker
 {
@@ -17,7 +20,6 @@ class TypeChecker
 
     this(Semantic semanticAnalyzer = null)
     {
-        this.reporter = reporter;
         this.semanticAnalyzer = semanticAnalyzer;
 
         typeHierarchy = [
@@ -66,16 +68,6 @@ class TypeChecker
         {
             return typeMap[sourceType];
         }
-
-        if (semanticAnalyzer !is null)
-        {
-            auto structInfo = semanticAnalyzer.getStruct(sourceType);
-            if (structInfo !is null)
-            {
-                return "%" ~ structInfo.name;
-            }
-        }
-
         throw new Exception("Unsupported type mapping for " ~ sourceType);
     }
 
@@ -119,7 +111,7 @@ class TypeChecker
     }
 
     // Gets the promoted type between two numeric types
-    private TypeInfo promoteTypes(string leftType, string rightType)
+    private FTypeInfo promoteTypes(string leftType, string rightType)
     {
         int leftRank = typeHierarchy.get(leftType, 0);
         int rightRank = typeHierarchy.get(rightType, 0);
@@ -128,7 +120,7 @@ class TypeChecker
         {
             return createTypeInfo(leftType);
         }
-        return createTypeInfo(rightType);
+        return createTypeInfo(cast(TypesNative) rightType);
     }
 
     public bool areTypesCompatible(string sourceType, string targetType)
@@ -165,7 +157,7 @@ class TypeChecker
         return false;
     }
 
-    public TypeInfo checkBinaryExprTypes(Expr left, Expr right, string operator)
+    public FTypeInfo checkBinaryExprTypes(Stmt left, Stmt right, string operator)
     {
         string leftType = left.type.baseType;
         string rightType = right.type.baseType;
@@ -290,13 +282,13 @@ class TypeChecker
         return result;
     }
 
-    public string formatLiteralForType(NativeValue value, string targetType)
+    public string formatLiteralForType(Variant value, string targetType)
     {
         try
         {
             if (!targetType.canFind("i8"))
             {
-                auto numValue = to!double(value);
+                auto numValue = value.get!double();
                 if (!isNaN(numValue))
                 {
                     if (targetType == "float" || targetType == "double")
@@ -304,9 +296,9 @@ class TypeChecker
                         string strValue = to!string(value);
                         if (to!long(numValue) == numValue && !strValue.canFind("."))
                         {
-                            return to!string(value) ~ ".0";
+                            return value.get!string ~ ".0";
                         }
-                        return to!string(value);
+                        return value.get!string;
                     }
                     return to!string(cast(long) numValue);
                 }
@@ -314,17 +306,17 @@ class TypeChecker
 
             if (is(typeof(value) == string))
             {
-                return to!string(value);
+                return value.get!string;
             }
         }
         catch (Exception e)
         {
             // Ignore conversion errors and fall through to default
         }
-        return to!string(value);
+        return value.get!string;
     }
 
-    public bool isPointerType(TypeInfo type)
+    public bool isPointerType(FTypeInfo type)
     {
         return type.isPointer;
     }
@@ -333,12 +325,12 @@ class TypeChecker
 // Singleton instance for global access
 private __gshared TypeChecker typeCheckerInstance;
 
-public TypeChecker getTypeChecker(DiagnosticReporter reporter = null,
+public TypeChecker getTypeChecker(
     Semantic semanticAnalyzer = null)
 {
     if (typeCheckerInstance is null)
     {
-        typeCheckerInstance = new TypeChecker(reporter, semanticAnalyzer);
+        typeCheckerInstance = new TypeChecker(semanticAnalyzer);
     }
     return typeCheckerInstance;
 }

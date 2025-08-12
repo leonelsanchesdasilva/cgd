@@ -9,31 +9,65 @@ import frontend.parser.ast;
 class Semantic
 {
 public:
-    SymbolInfo[string] scopeStack = [];
-    StdLibFunction[string] availableFunctions = [];
-    bool[string] importedModules = [];
-    StdLibModule[string] stdLibs = [];
-    bool[string] identifiersUsed = [];
+    SymbolInfo[string][] scopeStack;
+
+    StdLibFunction[string] availableFunctions;
+    bool[string] importedModules;
+    StdLibModule[string] stdLibs;
+    bool[string] identifiersUsed;
+
+    this()
+    {
+        this.pushScope();
+        this.typeChecker = getTypeChecker(this);
+    }
+
 private:
-    Stmt[] externalNodes = [];
+    Stmt[] nodes;
     TypeChecker typeChecker;
 
     void pushScope()
     {
-        this.scopeStack ~= [];
+        scopeStack ~= (SymbolInfo[string]).init;
     }
 
     void popScope()
     {
-        if (this.scopeStack.length <= 1)
+        if (scopeStack.length > 0)
         {
-            // Cannot pop the global scope.
+            scopeStack.length -= 1;
         }
-        this.scopeStack.length -= 1; // arr.pop()
     }
 
     SymbolInfo[string] currentScope()
     {
-        return this.scopeStack[cast(int) this.scopeStack.length - 1];
+        if (scopeStack.length > 0)
+        {
+            return scopeStack[$ - 1];
+        }
+        else
+        {
+            return (SymbolInfo[string]).init;
+        }
+    }
+
+    void addSymbol(string name, SymbolInfo info)
+    {
+        if (scopeStack.length > 0)
+        {
+            scopeStack[$ - 1][name] = info;
+        }
+    }
+
+    SymbolInfo* lookupSymbol(string name)
+    {
+        for (int i = cast(int) scopeStack.length - 1; i >= 0; i--)
+        {
+            if (name in scopeStack[i])
+            {
+                return &scopeStack[i][name];
+            }
+        }
+        return null;
     }
 }

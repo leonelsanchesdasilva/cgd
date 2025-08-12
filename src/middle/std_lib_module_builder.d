@@ -1,21 +1,14 @@
-/**
- * Farpy - A programming language
- *
- * Copyright (c) 2025 Fernando (FernandoTheDev)
- *
- * This software is licensed under the MIT License.
- * See the LICENSE file in the project root for full license information.
- */
 module middle.std_lib_module_builder;
 
 import std.string;
 import std.array;
 import middle.function_builder;
+import frontend.parser.ftype_info;
 
 struct StdLibFunction
 {
     string name;
-    TypeInfo returnType;
+    FTypeInfo returnType;
     string targetType;
     string[] params;
     bool isVariadic;
@@ -36,14 +29,14 @@ struct StdLibFunction
 struct FunctionParam
 {
     string name;
-    TypeInfo type;
+    FTypeInfo type;
     string targetType;
 }
 
 struct Function
 {
     string name;
-    TypeInfo returnType;
+    FTypeInfo returnType;
     FunctionParam[] params;
     bool isVariadic;
     string targetType;
@@ -59,18 +52,16 @@ struct StdLibModule
 class StdLibModuleBuilder
 {
     private StdLibModule moduleData;
-    private DiagnosticReporter reporter;
 
-    this(string name, DiagnosticReporter reporter = null)
+    this(string name)
     {
         this.moduleData.name = name;
         this.moduleData.functions = null;
-        this.reporter = reporter;
     }
 
     FunctionBuilder defineFunction(string name)
     {
-        return new FunctionBuilder(name, this, this.reporter);
+        return new FunctionBuilder(name, this);
     }
 
     StdLibModuleBuilder defineFlags(string[] flags...)

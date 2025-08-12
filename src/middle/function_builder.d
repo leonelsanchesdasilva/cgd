@@ -2,13 +2,14 @@ module middle.function_builder;
 
 import std.string;
 import std.array;
+import std.conv;
 import std.algorithm;
 import middle.std_lib_module_builder;
 import middle.type_checker;
+import frontend.parser.ftype_info;
 
 enum ExternStrategy
 {
-    Basic, // extern(C) int func(int param);
     WithLinkage, // extern(C++) int func(int param);
     WithAttributes, // @nogc @safe extern(C) int func(int param);
     WithPragma, // pragma(lib, "mylib"); extern(C) int func(int param);
@@ -23,20 +24,20 @@ class FunctionBuilder
 
     this(string name, StdLibModuleBuilder moduleBuilder)
     {
-        this.func = new StdLibFunction();
+        this.func = StdLibFunction();
         this.func.name = name;
         this.func.isStdLib = true;
         this.func.isVariadic = false;
         this.func.params = [];
 
         this.moduleBuilder = moduleBuilder;
-        this.typeChecker = getTypeChecker(reporter);
+        this.typeChecker = getTypeChecker();
     }
 
-    FunctionBuilder returns(TypeInfo type)
+    FunctionBuilder returns(FTypeInfo type)
     {
         this.func.returnType = type;
-        this.func.targetType = this.typeChecker.mapToType(type.baseType);
+        this.func.targetType = this.typeChecker.mapToDType(type.baseType);
         return this;
     }
 
@@ -295,12 +296,10 @@ class FunctionBuilder
         ];
     }
 
-    FunctionBuilder generateDExtern(ExternStrategy strategy = ExternStrategy.Basic)
+    FunctionBuilder generate(ExternStrategy strategy = ExternStrategy.WithLinkage)
     {
-        final switch (strategy)
+        switch (strategy)
         {
-        case ExternStrategy.Basic:
-            return generateDExtern();
         case ExternStrategy.WithLinkage:
             return generateDExternWithLinkage(this.func.linkage);
         case ExternStrategy.WithAttributes:
@@ -309,12 +308,14 @@ class FunctionBuilder
             return generateDExternWithPragma();
         case ExternStrategy.Complete:
             return generateDExternComplete();
+        default:
+            return generateDExternWithLinkage(this.func.linkage);
         }
     }
 
     StdLibModuleBuilder done()
     {
-        if (this.func.returnType is null)
+        if (this.func.returnType.baseType is null)
         {
             throw new Exception("Function " ~ this.func.name ~
                     " must have a return type");
