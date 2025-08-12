@@ -95,6 +95,7 @@ private:
             analyzedNode = this.analyzeReturnStatement(cast(ReturnStatement) node);
             break;
         case NodeType.CallExpr:
+            analyzedNode = this.analyzeCallExpr(cast(CallExpr) node);
             break;
 
         case NodeType.StringLiteral:
@@ -109,10 +110,179 @@ private:
             break;
 
         default:
-            throw new Error(format("Nó desconhecido '%s'.", to!string(node.kind)));
+            throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
     }
+
+    CallExpr analyzeCallExpr(CallExpr node)
+    {
+        string funcName = node.calle.value.get!string;
+
+        Function* userFunc = funcName in this.availableFunctions;
+        StdLibFunction* stdFunc = funcName in this.availableStdFunctions;
+
+        if (!userFunc && !stdFunc)
+        {
+            throw new Exception(format("A função '%s' não está definida.", funcName));
+        }
+
+        FTypeInfo returnType;
+        FunctionParam[] userExpectedParams;
+        string[] stdExpectedParams;
+        bool isVariadic = false;
+        string funcType;
+        bool isStdFunction = false;
+
+        if (userFunc)
+        {
+            returnType = userFunc.returnType;
+            userExpectedParams = userFunc.params;
+            isVariadic = userFunc.isVariadic;
+            funcType = userFunc.targetType;
+            isStdFunction = false;
+        }
+        else if (stdFunc)
+        {
+            returnType = stdFunc.returnType;
+            stdExpectedParams = stdFunc.params;
+            isVariadic = stdFunc.isVariadic;
+            funcType = stdFunc.targetType;
+            isStdFunction = true;
+        }
+
+        // Verifica número de argumentos (apenas se não for variadic)
+        size_t expectedArgCount = isStdFunction ? stdExpectedParams.length
+            : userExpectedParams.length;
+
+        if (!isVariadic && node.args.length != expectedArgCount)
+        {
+            throw new Exception(format(
+                    "A função '%s' espera %d argumentos, mas recebeu %d.",
+                    funcName, expectedArgCount, node.args.length
+            ));
+        }
+
+        // Define o tipo de retorno da chamada
+        node.type = returnType;
+
+        // Marca a função como usada
+        if (!(funcName in this.identifiersUsed))
+        {
+            this.identifiersUsed[funcName] = true;
+        }
+
+        // Analisa e valida cada argumento
+        Stmt[] analyzedArgs;
+        analyzedArgs.reserve(node.args.length);
+
+        for (size_t i = 0; i < node.args.length; i++)
+        {
+            // Analisa o argumento
+            Stmt analyzedArg = this.analyzeNode(node.args[i]);
+
+            // Se é função variadic e não temos mais parâmetros definidos, aceita qualquer tipo
+            if (i >= expectedArgCount && isVariadic)
+            {
+                analyzedArgs ~= analyzedArg;
+                continue;
+            }
+
+            // Verifica se temos parâmetro definido para este argumento
+            if (i >= expectedArgCount)
+            {
+                throw new Exception(format(
+                        "Muitos argumentos para a função '%s'. Esperado %d, recebido %d.",
+                        funcName, expectedArgCount, node.args.length
+                ));
+            }
+
+            // Obtém o tipo esperado baseado no tipo de função
+            TypesNative expectedParamType;
+            string expectedParamTypeStr;
+
+            if (isStdFunction)
+            {
+                // Para std functions, params é string[]
+                expectedParamTypeStr = stdExpectedParams[i];
+                expectedParamType = cast(TypesNative) this.typeChecker.mapToDType(
+                    expectedParamTypeStr);
+            }
+            else
+            {
+                // Para user functions, params é FunctionParam[]
+                expectedParamType = userExpectedParams[i].type.baseType;
+                expectedParamTypeStr = userExpectedParams[i].targetType;
+            }
+
+            FTypeInfo argType = analyzedArg.type;
+
+            // Conversão especial: qualquer tipo para string
+            if (argType.baseType != TypesNative.STRING && expectedParamType == TypesNative.STRING)
+            {
+                analyzedArg.type.baseType = TypesNative.STRING;
+
+                // Converte o valor para string baseado no tipo original
+                switch (argType.baseType)
+                {
+                case TypesNative.INT:
+                    if (analyzedArg.value.hasValue())
+                    {
+                        analyzedArg.value = to!string(analyzedArg.value.get!int);
+                    }
+                    break;
+                case TypesNative.FLOAT:
+                    if (analyzedArg.value.hasValue())
+                    {
+                        analyzedArg.value = to!string(analyzedArg.value.get!float);
+                    }
+                    break;
+                case TypesNative.BOOL:
+                    if (analyzedArg.value.hasValue())
+                    {
+                        analyzedArg.value = analyzedArg.value.get!bool ? "true" : "false";
+                    }
+                    break;
+                default:
+                    break;
+                }
+
+                analyzedArgs ~= analyzedArg;
+                continue;
+            }
+
+            // Verifica compatibilidade de tipos
+            string argTypeStr = to!string(argType.baseType).toLower();
+            string paramTypeStr = expectedParamTypeStr.toLower();
+
+            if (!this.typeChecker.areTypesCompatible(argTypeStr, paramTypeStr))
+            {
+                throw new Exception(format(
+                        "O argumento %d da função '%s' espera tipo '%s', mas recebeu '%s'.",
+                        i + 1, funcName, expectedParamTypeStr, argTypeStr
+                ));
+            }
+
+            // Se os tipos são compatíveis mas diferentes, faz a conversão
+            if (this.typeChecker.areTypesCompatible(argTypeStr, paramTypeStr) &&
+                argType.baseType != expectedParamType)
+            {
+                analyzedArg.type.baseType = expectedParamType;
+
+                // Aqui você poderia adicionar conversão de valores se necessário
+                // analyzedArg.llvmType = this.typeChecker.mapToLLVMType(paramTypeStr);
+            }
+
+            analyzedArgs ~= analyzedArg;
+        }
+
+        // Atualiza os argumentos analisados
+        node.args = analyzedArgs;
+
+        return node;
+    }
+
+    // Também adicione este case ao switch em analyzeNode():
 
     ReturnStatement analyzeReturnStatement(ReturnStatement node)
     {
@@ -127,7 +297,7 @@ private:
 
         if ((id in this.availableFunctions) || id in this.availableStdFunctions)
         {
-            throw new Error(format(`A função '%s' já está definida.`, id));
+            throw new Exception(format(`A função '%s' já está definida.`, id));
         }
 
         this.pushScope(); // Escopo para a função
@@ -139,14 +309,16 @@ private:
             string _id = arg.id.value.get!string;
             if (_id in this.currentScope())
             {
-                throw new Error(format(
+                throw new Exception(format(
                         `Parâmetro '%s' já foi definido.`, _id
                 ));
             }
 
             string baseType = to!string(arg.type.baseType).toLower();
+            // writeln("FN BASE TYPE: ", baseType);
             arg.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
                 baseType);
+            // writeln("ARG BASE TYPE: ", arg.type.baseType);
             this.addSymbol(_id, SymbolInfo(_id, arg.type, true, false, arg.id.loc));
             args ~= arg;
         }
@@ -157,6 +329,8 @@ private:
         FunctionParam[] params;
         foreach (FunctionArg arg; args)
         {
+            // writeln("PARAMS ", FunctionParam(arg.id.value.get!string, arg.type, to!string(
+            //         arg.type.baseType)));
             params ~= FunctionParam(arg.id.value.get!string, arg.type, to!string(arg.type.baseType));
         }
 
@@ -181,7 +355,7 @@ private:
                     string t1 = to!string(returnStmt.type.baseType).toLower();
                     if (!this.typeChecker.areTypesCompatible(t1, t2) && t2 != "void")
                     {
-                        throw new Error(format(
+                        throw new Exception(format(
                                 "A função '%s' está retornando '%s' ao invés de '%s' como esperado.",
                                 id, t1, t2
                         ));
@@ -192,12 +366,13 @@ private:
 
         if (t2 != "void" && !hasReturn)
         {
-            throw new Error(format(
+            throw new Exception(format(
                     "A função esperava um retorno '%s', mas não foi encontrado qualquer tipo de retorno nela.", t2),
             );
         }
 
         node.args = args;
+        // writeln("T: ", node.args[0].type.baseType);
         node.block = analyzedBlock;
         node.type = returnType;
         node.context = this.currentScope();
@@ -213,7 +388,7 @@ private:
 
         if (!symbol)
         {
-            throw new Error(
+            throw new Exception(
                 format(
                     `O identificador '%s' não existe no escopo`, id));
         }
@@ -222,6 +397,7 @@ private:
         {
             this.identifiersUsed[id] = true;
         }
+        node.type = symbol.type;
 
         return node;
     }
@@ -230,6 +406,7 @@ private:
     {
         Stmt left = this.analyzeNode(node.left);
         Stmt right = this.analyzeNode(node.right);
+
         FTypeInfo resultType = this.typeChecker.checkBinaryExprTypes(left, right, node.op);
 
         node.left = left;
@@ -245,7 +422,7 @@ private:
 
         if (id in this.currentScope())
         {
-            throw new Error(
+            throw new Exception(
                 format(
                     `A variavel '%s' já está definida no escopo em %d:%d`, id, cast(int) node.id.loc.line, cast(
                     int) node.id.loc.start));
@@ -253,13 +430,13 @@ private:
 
         if (!node.value.hasValue)
         {
-            throw new Error(format("Erro: o valor do nó '%s' é nulo.", to!string(node.kind)));
+            throw new Exception(format("Erro: o valor do nó '%s' é nulo.", to!string(node.kind)));
         }
 
         Stmt analyzedValue = this.analyzeNode(node.value.get!Stmt);
         node.value = analyzedValue;
 
-        string baseType = to!string(node.type.baseType).toLower();
+        string baseType = to!string(analyzedValue.type.baseType).toLower();
         node.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
             baseType);
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));

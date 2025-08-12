@@ -231,7 +231,7 @@ private:
             //     "String not closed",
             //     "Add '\"' at the end of the desired string.",
             // );
-            throw new Error("String not closed");
+            throw new Exception("String not closed");
         }
 
         this.createToken(

@@ -1,6 +1,7 @@
 module frontend.parser.parser;
 
 import std.algorithm;
+import std.format;
 import std.stdio;
 import std.conv;
 import std.variant;
@@ -155,7 +156,7 @@ private:
             }
             else if (this.peek().kind != TokenType.RPAREN)
             {
-                throw new Error("Esperava-se ',' ou ')' após o(s) argumento(s).");
+                throw new Exception("Esperava-se ',' ou ')' após o(s) argumento(s).");
             }
         }
         this.consume(TokenType.RPAREN, "Esperava-se ')' após o(s) argumento(s).");
@@ -181,7 +182,7 @@ private:
             }
             while (this.match([TokenType.COMMA]));
         }
-        this.consume(TokenType.RPAREN, "Experava-se '}' após os argumentos.");
+        this.consume(TokenType.RPAREN, "Experava-se ')' após os argumentos.");
         return new CallExpr(new Identifier(calle.value.get!string, calle.loc), args, calle.loc);
     }
 
@@ -525,7 +526,8 @@ private:
         if (this.check(expected))
             return this.advance();
         const token = this.peek();
-        throw new Error(`Erro de parsing: ${message}`);
+
+        throw new Exception(format(`Erro de parsing: %s`, message));
     }
 
     Precedence getPrecedence(TokenType kind)
