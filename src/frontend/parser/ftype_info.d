@@ -24,6 +24,18 @@ FTypeInfo createTypeInfo(TypesNative baseType, bool s = false)
     );
 }
 
+FTypeInfo createTypeInfo(string baseType, bool s = false)
+{
+    return FTypeInfo(
+        cast(TypesNative) baseType,
+        false,
+        0,
+        false,
+        s,
+        0
+    );
+}
+
 FTypeInfo createArrayType(TypesNative baseType, ulong dimensions = 1, bool s = false)
 {
     return FTypeInfo(
