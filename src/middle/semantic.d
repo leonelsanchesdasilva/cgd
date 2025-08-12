@@ -349,7 +349,6 @@ private:
             {
                 hasReturn = true;
                 ReturnStatement returnStmt = cast(ReturnStatement) analyzedStmt;
-                writeln(returnStmt);
                 if (returnStmt.value.hasValue())
                 {
                     string t1 = to!string(returnStmt.type.baseType).toLower();

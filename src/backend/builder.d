@@ -78,14 +78,14 @@ private:
     void pushScope()
     {
         scopeStack ~= (Symbol[string]).init;
-        writeln("DEBUG: Novo escopo criado. Stack size: ", scopeStack.length);
+        // writeln("DEBUG: Novo escopo criado. Stack size: ", scopeStack.length);
     }
 
     void popScope()
     {
         enforce(scopeStack.length > 0, "Tentativa de remover escopo inexistente");
         scopeStack = scopeStack[0 .. $ - 1];
-        writeln("DEBUG: Escopo removido. Stack size: ", scopeStack.length);
+        // writeln("DEBUG: Escopo removido. Stack size: ", scopeStack.length);
     }
 
     // Adiciona símbolo no escopo atual
@@ -94,13 +94,13 @@ private:
         if (isFunction)
         {
             globalScope[name] = Symbol(type, name, true);
-            writeln("DEBUG: Função adicionada ao escopo global: ", name, " tipo: ", type.baseType);
+            // writeln("DEBUG: Função adicionada ao escopo global: ", name, " tipo: ", type.baseType);
         }
         else
         {
             enforce(scopeStack.length > 0, "Nenhum escopo disponível para adicionar símbolo");
             scopeStack[$ - 1][name] = Symbol(type, name, false);
-            writeln("DEBUG: Variável adicionada ao escopo atual: ", name, " tipo: ", type.baseType);
+            // writeln("DEBUG: Variável adicionada ao escopo atual: ", name, " tipo: ", type.baseType);
         }
     }
 
@@ -112,8 +112,8 @@ private:
         {
             if (auto symbol = name in scope_)
             {
-                writeln("DEBUG: Símbolo encontrado no escopo local: ", name, " tipo: ", symbol
-                        .type.baseType);
+                // writeln("DEBUG: Símbolo encontrado no escopo local: ", name, " tipo: ", symbol
+                //         .type.baseType);
                 return symbol;
             }
         }
@@ -121,8 +121,8 @@ private:
         // Depois procura no escopo global (funções)
         if (auto symbol = name in globalScope)
         {
-            writeln("DEBUG: Símbolo encontrado no escopo global: ", name, " tipo: ", symbol
-                    .type.baseType);
+            // writeln("DEBUG: Símbolo encontrado no escopo global: ", name, " tipo: ", symbol
+            //         .type.baseType);
             return symbol;
         }
 
@@ -241,7 +241,6 @@ private:
     {
         auto name = node.value.get!string;
 
-        // AQUI É A MÁGICA! Agora conseguimos determinar o tipo real
         auto symbol = lookupSymbol(name);
         if (symbol is null)
         {
@@ -474,6 +473,6 @@ public:
         }
 
         codegen.currentModule.addFunction(mainFunc);
-        writeln(codegen.generate());
+        write(codegen.generate());
     }
 }
