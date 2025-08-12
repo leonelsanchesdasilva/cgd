@@ -39,6 +39,7 @@ class Stmt
     FTypeInfo type;
     Variant value;
     Loc loc;
+    Stmt[] args;
 }
 
 class Program : Stmt
@@ -173,6 +174,7 @@ class CallExpr : Stmt
         this.kind = NodeType.CallExpr;
         this.calle = calle;
         this.loc = loc;
+        this.args = args;
         this.type = createTypeInfo(TypesNative.NULL);
     }
 }
