@@ -80,30 +80,6 @@ private:
         }
     }
 
-    /*
-    
-    private parseCallExpression(callee: Expr): Expr {
-    // consume '('
-    const paren = this.peek();
-    this.advance();
-    const args: Expr[] = [];
-    if (!this.check(TokenType.RPAREN)) {
-      do {
-        args.push(this.parseExpression(Precedence.LOWEST));
-      } while (this.match(TokenType.COMMA));
-    }
-    this.consume(TokenType.RPAREN, "Expect ')' after arguments.");
-    return {
-      kind: "CallExpr",
-      callee,
-      type: createTypeInfo("null"),
-      arguments: args,
-      loc: this.makeLoc(callee.loc, paren.loc),
-    } as CallExpr;
-  }
-
-    */
-
     Stmt parseCallExpression()
     {
         Token calle = this.previous();
