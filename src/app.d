@@ -2,6 +2,8 @@ import std.stdio;
 import std.file;
 import frontend.lexer.lexer;
 import frontend.lexer.token;
+import frontend.parser.parser;
+import frontend.parser.ast;
 
 void main(string[] args)
 {
@@ -22,8 +24,18 @@ void main(string[] args)
 	Lexer lexer = new Lexer(args[1], fileContent, ".");
 	Token[] tokens = lexer.tokenize();
 
-	foreach (Token token; tokens)
+	// foreach (Token token; tokens)
+	// {
+	// 	token.print();
+	// }
+
+	Parser parser = new Parser(tokens);
+	Program program = parser.parse();
+
+	foreach (Stmt stmt; program.body)
 	{
-		token.print();
+		writeln("Kind: ", stmt.kind);
+		writeln("Value: ", stmt.value);
+		writeln("Line: ", stmt.loc.line, "\n");
 	}
 }

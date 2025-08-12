@@ -224,7 +224,7 @@ private:
         }
 
         // Check for unclosed string
-        if (this.offset >= this.source.length || this.source[this.offset] != '"' && this.source[this.offset] != '\'')
+        if (this.offset >= this.source.length || (this.source[this.offset] != '"' && this.source[this.offset] != '\''))
         {
             // this.reportError(
             //     this.getLocation(startPos, this.start + value.length + 1),
@@ -433,7 +433,7 @@ private:
         string number = this.consumeDigits();
 
         // Handle range operator (e.g., 123..456)
-        if (this.source[2 .. this.offset] == "..")
+        if (this.source[0 .. this.offset] == "..")
         {
             this.createTokenWithLocation(
                 TokenType.INT,
