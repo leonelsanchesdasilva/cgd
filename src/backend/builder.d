@@ -8,7 +8,9 @@ import std.variant;
 import frontend.parser.ftype_info;
 import frontend.parser.ast;
 import frontend.values;
+import middle.std_lib_module_builder : StdLibFunction;
 import backend.codegen.core;
+import middle.semantic;
 
 alias GenerationResult = Variant;
 
@@ -32,14 +34,10 @@ class Builder
 private:
     Program program;
     Function mainFunc;
-    CodeGenerator codegen;
+    Function currentFunc;
 
     Type[TypesNative] typeCache;
-
-    // Sistema de escopo - stack de tabelas de símbolos
     Symbol[string][] scopeStack;
-
-    // Escopo global para funções
     Symbol[string] globalScope;
 
     Type getType(FTypeInfo t)
@@ -104,10 +102,8 @@ private:
         }
     }
 
-    // Busca símbolo nos escopos (do mais interno para o mais externo)
     Symbol* lookupSymbol(string name)
     {
-        // Primeiro procura nos escopos locais (de dentro para fora)
         foreach_reverse (ref scope_; scopeStack)
         {
             if (auto symbol = name in scope_)
@@ -118,7 +114,6 @@ private:
             }
         }
 
-        // Depois procura no escopo global (funções)
         if (auto symbol = name in globalScope)
         {
             // writeln("DEBUG: Símbolo encontrado no escopo global: ", name, " tipo: ", symbol
@@ -145,6 +140,8 @@ private:
             return GenerationResult(genFunctionDeclaration(cast(FunctionDeclaration) node));
         case NodeType.ReturnStatement:
             return GenerationResult(genReturnStatement(cast(ReturnStatement) node));
+        case NodeType.IfStatement:
+            return GenerationResult(genIfStatement(cast(IfStatement) node));
 
         case NodeType.StringLiteral:
             return GenerationResult(genStringLiteral(cast(StringLiteral) node));
@@ -192,21 +189,80 @@ private:
 
     Statement genProgram(Program node)
     {
-        // Cria escopo global para o programa
         pushScope();
-        scope (exit)
-            popScope();
 
-        Statement[] statements;
+        foreach (stmt; node.body)
+        {
+            if (stmt.kind == NodeType.FunctionDeclaration)
+            {
+                auto funcDecl = cast(FunctionDeclaration) stmt;
+                auto funcName = funcDecl.id.value.get!string;
+                addSymbol(funcName, funcDecl.type, true);
+            }
+        }
+
         foreach (stmt; node.body)
         {
             auto result = generate(stmt);
+
+            // writeln("DEBUG: Processando statement do tipo: ", stmt.kind);
+            // writeln("DEBUG: Result type: ", result.type);
+
+            // if (stmt.kind == NodeType.VariableDeclaration)
+            // {
             if (result.type == typeid(Statement))
             {
-                statements ~= result.get!Statement;
+                auto _stmt = result.get!Statement;
+                if (mainFunc !is null && _stmt !is null)
+                {
+                    mainFunc.addStatement(_stmt);
+                }
+            }
+
+            if (result.type == typeid(Expression))
+            {
+                auto expr = result.get!Expression;
+                if (expr !is null && mainFunc !is null)
+                {
+                    auto exprStmt = new ExpressionStatement(expr);
+                    mainFunc.addStatement(exprStmt);
+                }
+            }
+            // }
+        }
+
+        popScope();
+        return null;
+    }
+
+    Statement genIfStatement(IfStatement node)
+    {
+        Statement[] stmts = [];
+        foreach (Stmt stmt; node.primary)
+        {
+            auto result = this.generate(stmt);
+            if (result.type == typeid(Statement))
+            {
+                auto statement = result.get!Statement;
+                if (statement !is null)
+                {
+                    stmts ~= statement;
+                }
+            }
+            else if (result.type == typeid(Expression))
+            {
+                auto expr = result.get!Expression;
+                if (expr !is null)
+                {
+                    stmts ~= new ExpressionStatement(expr);
+                }
             }
         }
-        return statements.length > 0 ? statements[0] : null;
+
+        auto condition = this.generate(node.condition).get!Expression;
+        auto then = new BlockStatement(stmts);
+        auto _if = new IfStatementCore(condition, then);
+        return _if;
     }
 
     Expression genStringLiteral(StringLiteral node)
@@ -279,7 +335,6 @@ private:
     {
         auto funcName = node.calle.value.get!string;
 
-        // Verifica se a função existe
         auto symbol = lookupSymbol(funcName);
         if (symbol is null)
         {
@@ -335,19 +390,12 @@ private:
         }
 
         auto ret = new ReturnStatementCore(expr);
-        if (mainFunc !is null)
-        {
-            mainFunc.addStatement(ret);
-        }
         return ret;
     }
 
     Statement genFunctionDeclaration(FunctionDeclaration node)
     {
         auto funcName = node.id.value.get!string;
-
-        // Adiciona função ao escopo global ANTES de processar o corpo
-        addSymbol(funcName, node.type, true);
 
         Parameter[] params;
         params.reserve(node.args.length);
@@ -362,14 +410,17 @@ private:
             params
         );
 
-        auto previousFunc = mainFunc;
+        // Salva a função atual e define a nova como atual
+        auto previousFunc = currentFunc;
         scope (exit)
-            mainFunc = previousFunc;
+            currentFunc = previousFunc;
 
-        mainFunc = func;
+        currentFunc = func;
 
         // Cria novo escopo para a função
         pushScope();
+        scope (exit)
+            popScope(); // Remove escopo da função ao sair
 
         // Adiciona parâmetros ao escopo da função
         foreach (arg; node.args)
@@ -377,20 +428,25 @@ private:
             addSymbol(arg.id.value.get!string, arg.type, false);
         }
 
-        Statement[] statements;
-        statements.reserve(node.block.length);
+        // Processa o corpo da função
         foreach (stmt; node.block)
         {
             auto result = generate(stmt);
             if (result.type == typeid(Statement))
             {
-                statements ~= result.get!Statement;
+                auto statement = result.get!Statement;
+                if (statement !is null)
+                {
+                    func.addStatement(statement);
+                }
             }
         }
 
+        // Adiciona a função ao módulo
         codegen.currentModule.addFunction(func);
 
-        return statements.length > 0 ? statements[0] : null;
+        // Não retorna nada porque declarações de função não são statements
+        return null;
     }
 
     Statement genVariableDeclaration(VariableDeclaration node)
@@ -408,10 +464,6 @@ private:
             expr
         );
 
-        if (mainFunc !is null)
-        {
-            mainFunc.addStatement(var);
-        }
         return var;
     }
 
@@ -449,30 +501,26 @@ private:
     }
 
 public:
-    this(Program program)
+    Semantic semantic;
+    CodeGenerator codegen;
+
+    this(Program program, Semantic semantic)
     {
+        this.semantic = semantic;
         this.program = program;
         this.codegen = new CodeGenerator("main");
         this.mainFunc = new Function(getType(FTypeInfo(TypesNative.VOID)), "main");
+
+        // importando as funções std para nosso contexto atual
+        foreach (string name, StdLibFunction func; semantic.availableStdFunctions)
+        {
+            this.globalScope[name] = Symbol(func.returnType, name, true);
+        }
     }
 
     void build()
     {
-        foreach (node; program.body)
-        {
-            try
-            {
-                generate(node);
-            }
-            catch (Exception e)
-            {
-                writeln("Erro no codegen: ", e.message);
-                writeln("Arquivo: ", e.file, ":", e.line);
-                return;
-            }
-        }
-
         codegen.currentModule.addFunction(mainFunc);
-        write(codegen.generate());
+        this.genProgram(this.program);
     }
 }

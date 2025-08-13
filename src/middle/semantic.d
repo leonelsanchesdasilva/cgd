@@ -28,6 +28,19 @@ public:
     {
         this.pushScope();
         this.typeChecker = getTypeChecker(this);
+
+        // Vamos adicionar isso aqui temporariamente
+        StdLibModuleBuilder mod = new StdLibModuleBuilder("io");
+        FunctionBuilder func = new FunctionBuilder("escreva", mod)
+            .returns(createTypeInfo(TypesNative.NULL))
+            .variadic()
+            .customTargetType("void")
+            .libraryName("io")
+            .generateDExternComplete();
+
+        auto io = func.done();
+        importedModules["io"] = true;
+        availableStdFunctions["escreva"] = io.getFunction("escreva");
     }
 
     Program semantic(Program program)
@@ -97,6 +110,9 @@ private:
         case NodeType.CallExpr:
             analyzedNode = this.analyzeCallExpr(cast(CallExpr) node);
             break;
+        case NodeType.IfStatement:
+            analyzedNode = this.analyzeIfStatement(cast(IfStatement) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -113,6 +129,23 @@ private:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    IfStatement analyzeIfStatement(IfStatement node)
+    {
+        node.condition = this.analyzeNode(node.condition);
+
+        for (long i; i < node.primary.length; i++)
+        {
+            node.primary[i] = this.analyzeNode(node.primary[i]);
+        }
+
+        if (!node.secondary.isNull && node.secondary != null)
+        {
+            node.secondary = this.analyzeNode(node.secondary.get);
+        }
+
+        return node;
     }
 
     CallExpr analyzeCallExpr(CallExpr node)

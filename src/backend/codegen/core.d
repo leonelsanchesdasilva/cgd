@@ -274,7 +274,7 @@ class BlockStatement : Statement
     }
 }
 
-class IfStatement : Statement
+class IfStatementCore : Statement
 {
     Expression condition;
     Statement thenStmt;
@@ -404,6 +404,7 @@ class Module
     string name;
     string[] imports;
     Function[] functions;
+    string[] stdFunctions;
     Statement[] globalStatements;
 
     this(string name)
@@ -419,6 +420,11 @@ class Module
     void addFunction(Function func)
     {
         functions ~= func;
+    }
+
+    void addStdFunction(string func)
+    {
+        stdFunctions ~= func;
     }
 
     void addGlobalStatement(Statement stmt)
@@ -442,6 +448,16 @@ class Module
             result.put("import " ~ imp ~ ";\n");
         }
         if (imports.length > 0)
+        {
+            result.put("\n");
+        }
+
+        // Funções std
+        foreach (fn; stdFunctions)
+        {
+            result.put(fn ~ "\n");
+        }
+        if (stdFunctions.length > 0)
         {
             result.put("\n");
         }

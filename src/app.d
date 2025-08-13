@@ -1,11 +1,13 @@
 import std.stdio;
 import std.file;
+import std.array : split;
 import frontend.lexer.lexer;
 import frontend.lexer.token;
 import frontend.parser.parser;
 import frontend.parser.ast;
 import middle.semantic;
 import backend.builder;
+import backend.compiler;
 
 void main(string[] args)
 {
@@ -21,9 +23,11 @@ void main(string[] args)
 		return;
 	}
 
-	string fileContent = readText(args[1]);
+	string file = args[1];
+	string filename = file.split('.')[0];
+	string fileContent = readText(file);
 
-	Lexer lexer = new Lexer(args[1], fileContent, ".");
+	Lexer lexer = new Lexer(filename, fileContent, ".");
 	Token[] tokens = lexer.tokenize();
 
 	// foreach (Token token; tokens)
@@ -42,7 +46,8 @@ void main(string[] args)
 	// 	writeln("Line: ", stmt.loc.line, "\n");
 	// }
 
-	Program newProgram = new Semantic().semantic(program);
+	Semantic semantic = new Semantic();
+	Program newProgram = semantic.semantic(program);
 
 	// foreach (Stmt stmt; newProgram.body)
 	// {
@@ -51,6 +56,9 @@ void main(string[] args)
 	// 	writeln("S Line: ", stmt.loc.line, "\n");
 	// }
 
-	Builder builder = new Builder(newProgram);
+	Builder builder = new Builder(newProgram, semantic);
 	builder.build();
+
+	Compiler compiler = new Compiler(builder, filename ~ ".d");
+	compiler.compile();
 }

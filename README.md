@@ -37,6 +37,7 @@ Iniciado: 11 de agosto de 2025
 - [ ] Otimizador
 - [X] Gerador de código D
 - [ ] Geração do binário
+- [ ] Tratamento de erros eficiente
 - [ ] Criação de bibliotecas
   - [ ] io
   - [ ] math
