@@ -28,6 +28,22 @@ public:
     {
         this.pushScope();
         this.typeChecker = getTypeChecker(this);
+
+        // Vamos adicionar isso aqui temporariamente
+        StdLibModuleBuilder mod = new StdLibModuleBuilder("io");
+        FunctionBuilder func = new FunctionBuilder("escreva", mod)
+            .returns(createTypeInfo(TypesNative.NULL))
+            .withParams(["string"])
+            .variadic()
+            .customTargetType("void")
+            .targetName("delegua_lib_escreva")
+            .libraryName("io")
+            .isSafe()
+            .generateDExternComplete();
+
+        auto io = func.done();
+        importedModules["io"] = true;
+        availableStdFunctions["escreva"] = io.getFunction("escreva");
     }
 
     Program semantic(Program program)

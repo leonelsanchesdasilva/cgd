@@ -1,21 +1,9 @@
 module tests.gen;
 
-int ret1(int x)
-{
-    return x;
-}
-
-int ret2(int y)
-{
-    return y;
-}
-
-int sum(int x, int y)
-{
-    return (ret1(x) + ret2(y));
-}
+pragma(mangle, "io")
+@safe extern (D) void delegua_lib_escreva(string param0, ...);
 
 void main()
 {
-    int resultado = sum(1, 2);
+    delegua_lib_escreva("Oi");
 }

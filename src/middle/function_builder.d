@@ -18,7 +18,7 @@ enum ExternStrategy
 
 class FunctionBuilder
 {
-    private StdLibFunction func;
+    public StdLibFunction func;
     private StdLibModuleBuilder moduleBuilder;
     private TypeChecker typeChecker;
 
@@ -56,6 +56,36 @@ class FunctionBuilder
     FunctionBuilder targetName(string name)
     {
         this.func.targetName = name;
+        return this;
+    }
+
+    FunctionBuilder libraryName(string name)
+    {
+        this.func.libraryName = name;
+        return this;
+    }
+
+    FunctionBuilder isNoGc()
+    {
+        this.func.isNoGC = true;
+        return this;
+    }
+
+    FunctionBuilder isNoThrow()
+    {
+        this.func.isNoThrow = true;
+        return this;
+    }
+
+    FunctionBuilder isSafe()
+    {
+        this.func.isSafe = true;
+        return this;
+    }
+
+    FunctionBuilder isPure()
+    {
+        this.func.isPure = true;
         return this;
     }
 
@@ -199,7 +229,7 @@ class FunctionBuilder
         string pragmaStr = "";
         if (this.func.libraryName.length > 0)
         {
-            pragmaStr = "pragma(lib, \"" ~ this.func.libraryName ~ "\");\n";
+            pragmaStr = "pragma(mangle, \"" ~ this.func.libraryName ~ "\")\n";
         }
 
         this.func.ir = pragmaStr ~ "extern(" ~ this.func.linkage ~ ") " ~
@@ -236,7 +266,7 @@ class FunctionBuilder
         string pragmaStr = "";
         if (this.func.libraryName.length > 0)
         {
-            pragmaStr = "pragma(lib, \"" ~ this.func.libraryName ~ "\");\n";
+            pragmaStr = "pragma(mangle, \"" ~ this.func.libraryName ~ "\")\n";
         }
 
         // Atributos
@@ -309,7 +339,7 @@ class FunctionBuilder
         case ExternStrategy.Complete:
             return generateDExternComplete();
         default:
-            return generateDExternWithLinkage(this.func.linkage);
+            return generateDExternComplete();
         }
     }
 

@@ -8,7 +8,9 @@ import std.variant;
 import frontend.parser.ftype_info;
 import frontend.parser.ast;
 import frontend.values;
+import middle.std_lib_module_builder : StdLibFunction;
 import backend.codegen.core;
+import middle.semantic;
 
 alias GenerationResult = Variant;
 
@@ -32,7 +34,6 @@ class Builder
 private:
     Program program;
     Function mainFunc;
-    CodeGenerator codegen;
 
     Type[TypesNative] typeCache;
 
@@ -194,19 +195,34 @@ private:
     {
         // Cria escopo global para o programa
         pushScope();
-        scope (exit)
-            popScope();
 
-        Statement[] statements;
         foreach (stmt; node.body)
         {
             auto result = generate(stmt);
-            if (result.type == typeid(Statement))
+
+            writeln("DEBUG: Processando statement do tipo: ", stmt.kind);
+            writeln("DEBUG: Result type: ", result.type);
+
+            if (result.type == typeid(Expression))
             {
-                statements ~= result.get!Statement;
+                auto expr = result.get!Expression;
+                auto exprStmt = new ExpressionStatement(expr);
+                if (mainFunc !is null)
+                {
+                    mainFunc.addStatement(exprStmt);
+                }
+            }
+            else if (result.type == typeid(Statement))
+            {
+                auto _stmt = result.get!Statement;
+                if (mainFunc !is null && _stmt !is null)
+                {
+                    mainFunc.addStatement(_stmt);
+                }
             }
         }
-        return statements.length > 0 ? statements[0] : null;
+
+        return null;
     }
 
     Expression genStringLiteral(StringLiteral node)
@@ -449,30 +465,26 @@ private:
     }
 
 public:
-    this(Program program)
+    Semantic semantic;
+    CodeGenerator codegen;
+
+    this(Program program, Semantic semantic)
     {
+        this.semantic = semantic;
         this.program = program;
         this.codegen = new CodeGenerator("main");
         this.mainFunc = new Function(getType(FTypeInfo(TypesNative.VOID)), "main");
+
+        // importando as funções std para nosso contexto atual
+        foreach (string name, StdLibFunction func; semantic.availableStdFunctions)
+        {
+            this.globalScope[name] = Symbol(func.returnType, name, true);
+        }
     }
 
     void build()
     {
-        foreach (node; program.body)
-        {
-            try
-            {
-                generate(node);
-            }
-            catch (Exception e)
-            {
-                writeln("Erro no codegen: ", e.message);
-                writeln("Arquivo: ", e.file, ":", e.line);
-                return;
-            }
-        }
-
         codegen.currentModule.addFunction(mainFunc);
-        write(codegen.generate());
+        this.genProgram(this.program);
     }
 }
