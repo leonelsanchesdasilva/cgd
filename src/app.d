@@ -1,5 +1,6 @@
 import std.stdio;
 import std.file;
+import std.array : split;
 import frontend.lexer.lexer;
 import frontend.lexer.token;
 import frontend.parser.parser;
@@ -22,9 +23,11 @@ void main(string[] args)
 		return;
 	}
 
-	string fileContent = readText(args[1]);
+	string file = args[1];
+	string filename = file.split('.')[0];
+	string fileContent = readText(file);
 
-	Lexer lexer = new Lexer(args[1], fileContent, ".");
+	Lexer lexer = new Lexer(filename, fileContent, ".");
 	Token[] tokens = lexer.tokenize();
 
 	// foreach (Token token; tokens)
@@ -56,6 +59,6 @@ void main(string[] args)
 	Builder builder = new Builder(newProgram, semantic);
 	builder.build();
 
-	Compiler compiler = new Compiler(builder);
+	Compiler compiler = new Compiler(builder, filename ~ ".d");
 	compiler.compile();
 }

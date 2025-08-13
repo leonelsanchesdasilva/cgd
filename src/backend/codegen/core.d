@@ -274,7 +274,7 @@ class BlockStatement : Statement
     }
 }
 
-class IfStatement : Statement
+class IfStatementCore : Statement
 {
     Expression condition;
     Statement thenStmt;

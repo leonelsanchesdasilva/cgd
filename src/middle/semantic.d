@@ -33,12 +33,9 @@ public:
         StdLibModuleBuilder mod = new StdLibModuleBuilder("io");
         FunctionBuilder func = new FunctionBuilder("escreva", mod)
             .returns(createTypeInfo(TypesNative.NULL))
-            .withParams(["string"])
             .variadic()
             .customTargetType("void")
-            .targetName("delegua_lib_escreva")
             .libraryName("io")
-            .isSafe()
             .generateDExternComplete();
 
         auto io = func.done();
@@ -113,6 +110,9 @@ private:
         case NodeType.CallExpr:
             analyzedNode = this.analyzeCallExpr(cast(CallExpr) node);
             break;
+        case NodeType.IfStatement:
+            analyzedNode = this.analyzeIfStatement(cast(IfStatement) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -129,6 +129,23 @@ private:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    IfStatement analyzeIfStatement(IfStatement node)
+    {
+        node.condition = this.analyzeNode(node.condition);
+
+        for (long i; i < node.primary.length; i++)
+        {
+            node.primary[i] = this.analyzeNode(node.primary[i]);
+        }
+
+        if (!node.secondary.isNull && node.secondary != null)
+        {
+            node.secondary = this.analyzeNode(node.secondary.get);
+        }
+
+        return node;
     }
 
     CallExpr analyzeCallExpr(CallExpr node)

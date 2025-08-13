@@ -19,6 +19,9 @@ enum NodeType
     ReturnStatement,
     FunctionDeclaration,
 
+    IfStatement,
+    ElseStatement,
+
     IntLiteral,
     FloatLiteral,
     StringLiteral,
@@ -179,44 +182,45 @@ class CallExpr : Stmt
     }
 }
 
-// class IfStatement : Stmt
-// {
-//     Stmt condition, primary;
-//     NullStmt secondary;
+class IfStatement : Stmt
+{
+    Stmt condition;
+    Stmt[] primary;
+    NullStmt secondary;
 
-//     this(Stmt condition, Stmt primary, FTypeInfo type, Variant value, Loc loc, NullStmt secondary = null)
-//     {
-//         this.kind = NodeType.IfStatement;
-//         this.condition = condition;
-//         this.primary = primary;
-//         this.secondary = secondary;
-//         this.value = value;
-//         this.loc = loc;
-//         this.type = type;
-//     }
-// }
+    this(Stmt condition, Stmt[] primary, FTypeInfo type, Variant value, Loc loc, NullStmt secondary = null)
+    {
+        this.kind = NodeType.IfStatement;
+        this.condition = condition;
+        this.primary = primary;
+        this.secondary = secondary;
+        this.value = value;
+        this.loc = loc;
+        this.type = type;
+    }
+}
 
-// class ElifStatement : IfStatement
-// {
-//     this(Stmt condition, Stmt primary, FTypeInfo type, Variant value, Loc loc, NullStmt secondary = null)
-//     {
-//         super(condition, primary, type, value, loc);
-//     }
-// }
+class ElifStatement : IfStatement
+{
+    this(Stmt condition, Stmt[] primary, FTypeInfo type, Variant value, Loc loc, NullStmt secondary = null)
+    {
+        super(condition, primary, type, value, loc);
+    }
+}
 
-// class ElseStatement : Stmt
-// {
-//     Stmt primary;
+class ElseStatement : Stmt
+{
+    Stmt primary;
 
-//     this(Stmt primary, FTypeInfo type, Variant value, Loc loc)
-//     {
-//         this.kind = NodeType.ElseStatement;
-//         this.primary = primary;
-//         this.value = value;
-//         this.loc = loc;
-//         this.type = type;
-//     }
-// }
+    this(Stmt primary, FTypeInfo type, Variant value, Loc loc)
+    {
+        this.kind = NodeType.ElseStatement;
+        this.primary = primary;
+        this.value = value;
+        this.loc = loc;
+        this.type = type;
+    }
+}
 
 class UnaryExpr : Stmt
 {
