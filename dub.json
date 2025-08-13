@@ -5,5 +5,34 @@
 	"copyright": "Copyright © 2025, Fernando Dev",
 	"description": "Delegua General Compiler",
 	"license": "MIT",
-	"name": "dgc"
+	"name": "dgc",
+	"targetType": "executable",
+	"buildTypes": {
+		"debug": {
+			"dflags-dmd": ["-g", "-debug"],
+			"dflags-ldc": ["-g", "-O0"],
+			"dflags-gdc": ["-g", "-O0"]
+		},
+		"release": {
+			"dflags-dmd": ["-O", "-release", "-inline"],
+			"dflags-ldc": ["-O2", "-release", "-enable-inlining"],
+			"dflags-gdc": ["-O2", "-frelease"]
+		},
+		"release-fast": {
+			"dflags-dmd": [
+				"-O",
+				"-release",
+				"-inline",
+				"-boundscheck=off",
+				"-noboundscheck"
+			],
+			"dflags-ldc": [
+				"-O3",
+				"-release",
+				"-enable-inlining",
+				"-boundscheck=off"
+			],
+			"dflags-gdc": ["-O3", "-frelease", "-fbounds-check=off"]
+		}
+	}
 }

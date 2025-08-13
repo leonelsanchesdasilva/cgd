@@ -18,16 +18,18 @@ private:
     Builder builder;
     Semantic semantic;
     string filename;
+    string arquivoSaida;
     // Futuramente irá alterar para usar um caminho fixo
     // Ficaria em $HOME/.dgc/stdlib
     string stdlibPath = "stdlib"; // Diretório das bibliotecas padrão
 
 public:
-    this(Builder builder, string filename)
+    this(Builder builder, string filename, string arquivoSaida)
     {
         this.builder = builder;
         this.semantic = builder.semantic;
         this.filename = filename;
+        this.arquivoSaida = arquivoSaida;
     }
 
     void compile()
@@ -55,6 +57,24 @@ public:
     }
 
 private:
+    void removeTempFiles()
+    {
+        if (exists(this.filename))
+        {
+            writefln("🗑️  Removendo código salvo em: '%s'", this.filename);
+            remove(this.filename);
+        }
+
+        import std.array : split;
+
+        string oFile = this.filename.split(".")[0] ~ ".o";
+        if (exists(oFile))
+        {
+            writefln("🗑️  Removendo arquivo temporário: '%s'", oFile);
+            remove(oFile);
+        }
+    }
+
     void compileWithLDC()
     {
         writeln("🔧 Compilando com LDC...");
@@ -90,6 +110,8 @@ private:
             writeln("❌ Erro na compilação:");
             writeln(result.output);
         }
+
+        this.removeTempFiles();
     }
 
     string[] collectStdlibFiles()
@@ -138,14 +160,7 @@ private:
         // Opções de otimização (opcional)
         command ~= "-O2";
 
-        // Nome do executável (remove extensão .d e adiciona executável)
-        string executableName = filename.stripExtension();
-        if (executableName == filename) // Se não tinha extensão
-        {
-            executableName ~= "_exec";
-        }
-
-        command ~= "-of=" ~ executableName;
+        command ~= "-of=" ~ this.arquivoSaida;
 
         return command;
     }
@@ -188,6 +203,8 @@ private:
         {
             writefln("❌ Compilação falhou com código: %d", exitCode);
         }
+
+        this.removeTempFiles();
     }
 
     void precompileStdlib()
