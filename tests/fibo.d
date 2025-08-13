@@ -5,6 +5,7 @@ extern(D) void escreva(...);
 
 void main() {
     int resultado = fibonacci(10);
+    escreva("resultado: ", resultado, "\n");
     if ((resultado != 55))
     {
         escreva("o resultado está errado!");

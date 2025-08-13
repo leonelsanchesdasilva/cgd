@@ -36,10 +36,10 @@ Iniciado: 11 de agosto de 2025
   - [ ] Analisador semântico completo
 - [ ] Otimizador
 - [X] Gerador de código D
-- [ ] Geração do binário
+- [X] Geração do binário
 - [ ] Tratamento de erros eficiente
 - [ ] Criação de bibliotecas
-  - [ ] io
+  - [X] io
   - [ ] math
   - [ ] http
   - [ ] json

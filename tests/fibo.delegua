@@ -6,6 +6,8 @@ função fibonacci(n: inteiro): inteiro {
 }
 var resultado = fibonacci(10)
 
+escreva("resultado: ", resultado, "\\n")
+
 se (resultado != 55) {
     escreva("o resultado está errado!")
 }
