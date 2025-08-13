@@ -237,6 +237,7 @@ private:
 
     Statement genIfStatement(IfStatement node)
     {
+        writeln(node.secondary);
         Statement[] stmts = [];
         foreach (Stmt stmt; node.primary)
         {

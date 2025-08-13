@@ -1,6 +1,12 @@
-# DGC - Delegua General Compiler
+<p align="center">
+  <img src="assets/logo.png" width="150" alt="cgd logo"/>
+</p>
+
+# CGD - Compilador Geral Delégua
 
 Compilador para a linguagem de programação [Delegua](https://github.com/DesignLiquido/delegua).
+
+**Versão:** `0.0.1`
 
 ## Plataformas suportadas
 

@@ -20,7 +20,7 @@ private:
     string filename;
     string arquivoSaida;
     // Futuramente irá alterar para usar um caminho fixo
-    // Ficaria em $HOME/.dgc/stdlib
+    // Ficaria em $HOME/.cgd/stdlib
     string stdlibPath = "stdlib"; // Diretório das bibliotecas padrão
 
 public:

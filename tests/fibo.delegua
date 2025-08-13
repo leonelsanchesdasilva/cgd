@@ -10,4 +10,6 @@ escreva("resultado: ", resultado, "\\n")
 
 se (resultado != 55) {
     escreva("o resultado está errado!")
+} senão se resultado == 89 {
+    escreva("o resultado deu 89 kkkkkkk")
 }

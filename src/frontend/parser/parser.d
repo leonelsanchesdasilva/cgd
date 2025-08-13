@@ -139,6 +139,11 @@ private:
         FTypeInfo type = returnStmt is null ? createTypeInfo(TypesNative.VOID) : returnStmt.type;
         Variant value = type.baseType == TypesNative.VOID ? Variant("void") : Variant(
             returnStmt.value);
+
+        writeln("miaKhalifa: ", miaKhalifa);
+        writeln("Previous: ", this.previous());
+        writeln("Peek: ", this.peek(), "\n");
+
         return new IfStatement(condition, block, type, value, this.makeLoc(start.loc, end), bodySecond);
     }
 
