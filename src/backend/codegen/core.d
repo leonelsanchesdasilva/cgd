@@ -326,7 +326,7 @@ class ElseStatementCore : Statement
     }
 }
 
-class WhileStatement : Statement
+class WhileStatementCore : Statement
 {
     Expression condition;
     Statement body;
@@ -342,6 +342,59 @@ class WhileStatement : Statement
         string result = indent(indentLevel) ~ "while (" ~ condition.generateD() ~ ")\n";
         result ~= body.generateD(indentLevel);
         return result;
+    }
+}
+
+class ForStatementCore : Statement
+{
+    Statement initialization;
+    Expression condition;
+    Statement increment;
+    Statement body;
+
+    this(Statement initialization, Expression condition, Statement increment, Statement body)
+    {
+        this.initialization = initialization;
+        this.condition = condition;
+        this.increment = increment;
+        this.body = body;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        auto result = appender!string();
+        result.put(indent(indentLevel) ~ "for (");
+
+        if (initialization)
+        {
+            string initStr = initialization.generateD(0);
+            if (initStr.endsWith(";"))
+            {
+                initStr = initStr[0 .. $ - 1];
+            }
+            result.put(initStr);
+        }
+        result.put("; ");
+
+        if (condition)
+        {
+            result.put(condition.generateD());
+        }
+        result.put("; ");
+
+        if (increment)
+        {
+            string incStr = increment.generateD(0);
+            if (incStr.endsWith(";"))
+            {
+                incStr = incStr[0 .. $ - 1];
+            }
+            result.put(incStr);
+        }
+
+        result.put(")\n");
+        result.put(body.generateD(indentLevel));
+        return result.data;
     }
 }
 

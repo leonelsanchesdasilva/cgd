@@ -279,7 +279,7 @@ private:
 
         if (this.source[this.offset] == '*')
         {
-            // Multiple-line block comment
+            // Multiple-line body comment
             this.offset++;
 
             while (this.offset + 1 < this.source.length)
@@ -299,7 +299,7 @@ private:
                 this.offset++;
             }
             // Error
-            throw new Exception("Unclosed block comment");
+            throw new Exception("Unclosed body comment");
         }
 
         this.offset--;

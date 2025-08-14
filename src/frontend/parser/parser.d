@@ -73,12 +73,18 @@ private:
             return this.parseFnStatement();
         case TokenType.SE:
             return this.parseIfStatement();
+        case TokenType.PARA:
+            return this.parseForStatement();
+        case TokenType.ENQUANTO:
+            return this.parseWhileStatement();
 
             // Others
         case TokenType.IDENTIFIER:
             if (this.peek()
                 .kind == TokenType.LPAREN)
                 return this.parseCallExpression();
+            if (this.peek().kind == TokenType.EQUALS)
+                return this.parseAssignmentDeclaration();
             return new Identifier(token.value.get!string, token.loc);
 
         default:
@@ -87,18 +93,81 @@ private:
         }
     }
 
+    Stmt parseAssignmentDeclaration()
+    {
+        Token id = this.previous();
+        this.consume(TokenType.EQUALS, "Esperava-se '=' após o identificador.");
+        Stmt expr = this.parseExpression(Precedence.LOWEST);
+        return new AssignmentDeclaration(new Identifier(id.value.get!string, id.loc), expr, expr.type, id
+                .loc);
+    }
+
+    Stmt parseWhileStatement()
+    {
+        Loc start = this.previous().loc;
+        Stmt cond = this.parseExpression(Precedence.LOWEST);
+
+        this.consume(TokenType.LBRACE, "Esperava-se '{' após a condição do 'enquanto'.");
+        Stmt[] body;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Loc end = this.consume(
+            TokenType.RBRACE,
+            "Esperava-se '}' após o corpo do 'enquanto'.",
+        ).loc;
+
+        return new WhileStatement(cond, body, this.makeLoc(start, end));
+    }
+
+    Stmt parseForStatement()
+    {
+        Loc start = this.previous().loc;
+        Stmt _init = this.parseExpression(Precedence.LOWEST);
+
+        if (_init.kind != NodeType.VariableDeclaration && _init.kind != NodeType
+            .AssignmentDeclaration)
+            throw new Exception(
+                "É esperado uma declaração ou redeclaração de variavel no inicio do 'para'.");
+
+        this.consume(TokenType.SEMICOLON, "Esperava-se ';' antes da condição do 'para'.");
+        Stmt cond = this.parseExpression(Precedence.LOWEST);
+
+        this.consume(TokenType.SEMICOLON, "Esperava-se ';' após a condição do 'para'.");
+        Stmt expr = this.parseExpression(Precedence.LOWEST);
+
+        this.consume(TokenType.LBRACE, "Esperava-se '{' após a expressão do 'para'.");
+
+        Stmt[] body;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Loc end = this.consume(
+            TokenType.RBRACE,
+            "Esperava-se '}' após o bloco do 'para'.",
+        ).loc;
+
+        return new ForStatement(_init, cond, expr, body, this.makeLoc(start, end));
+    }
+
     Stmt parseElseStatement()
     {
         Token start = this.previous();
-        Stmt[] block = [];
+        Stmt[] body = [];
         Stmt returnStmt = null;
         Loc end;
         bool unique = false;
 
         if (this.peek().kind != TokenType.LBRACE)
         {
-            block ~= this.parseExpression(Precedence.LOWEST);
-            end = block[0].loc;
+            body ~= this.parseExpression(Precedence.LOWEST);
+            end = body[0].loc;
             unique = true;
         }
 
@@ -111,10 +180,10 @@ private:
                 if (this.peek().kind == TokenType.RETORNA)
                 {
                     returnStmt = this.parseExpression(Precedence.LOWEST);
-                    block ~= returnStmt;
+                    body ~= returnStmt;
                     break;
                 }
-                block ~= this.parseExpression(Precedence.LOWEST);
+                body ~= this.parseExpression(Precedence.LOWEST);
             }
             end = this.consume(TokenType.RBRACE, "Esperava-se '}' após o corpo da condição.")
                 .loc;
@@ -125,14 +194,14 @@ private:
         Variant value = type.baseType == TypesNative.VOID ? Variant("void") : Variant(
             returnStmt.value);
 
-        return new ElseStatement(block, type, value, this.makeLoc(start.loc, end));
+        return new ElseStatement(body, type, value, this.makeLoc(start.loc, end));
     }
 
     Stmt parseIfStatement(bool miaKhalifa = true)
     {
         Token start = this.previous();
         Stmt condition = this.parseExpression(Precedence.LOWEST);
-        Stmt[] block = [];
+        Stmt[] body = [];
         Stmt returnStmt = null;
         NullStmt bodySecond = null;
         Loc end;
@@ -140,8 +209,8 @@ private:
 
         if (this.peek().kind != TokenType.LBRACE)
         {
-            block ~= this.parseExpression(Precedence.LOWEST);
-            end = block[0].loc;
+            body ~= this.parseExpression(Precedence.LOWEST);
+            end = body[0].loc;
             unique = true;
         }
 
@@ -154,10 +223,10 @@ private:
                 if (this.peek().kind == TokenType.RETORNA)
                 {
                     returnStmt = this.parseExpression(Precedence.LOWEST);
-                    block ~= returnStmt;
+                    body ~= returnStmt;
                     break;
                 }
-                block ~= this.parseExpression(Precedence.LOWEST);
+                body ~= this.parseExpression(Precedence.LOWEST);
             }
             end = this.consume(TokenType.RBRACE, "Esperava-se '}' após o corpo da condição.")
                 .loc;
@@ -180,7 +249,7 @@ private:
         Variant value = type.baseType == TypesNative.VOID ? Variant("void") : Variant(
             returnStmt.value);
 
-        return new IfStatement(condition, block, type, value, this.makeLoc(start.loc, end), bodySecond);
+        return new IfStatement(condition, body, type, value, this.makeLoc(start.loc, end), bodySecond);
     }
 
     Stmt parseFnStatement()
@@ -201,11 +270,11 @@ private:
         }
 
         this.consume(TokenType.LBRACE, "Expect '{' before function body.");
-        Stmt[] block;
+        Stmt[] body;
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
         {
-            block ~= this.parseExpression(Precedence.LOWEST);
+            body ~= this.parseExpression(Precedence.LOWEST);
         }
 
         Token end = this.consume(
@@ -213,7 +282,7 @@ private:
             "Expect '}' after function body.",
         );
 
-        return new FunctionDeclaration(new Identifier(id.value.get!string, id.loc), args, block, returnType, this
+        return new FunctionDeclaration(new Identifier(id.value.get!string, id.loc), args, body, returnType, this
                 .makeLoc(
                     start.loc, end.loc));
     }

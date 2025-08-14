@@ -16,3 +16,4 @@ cgd-test-*
 tests/gramaticas
 performance
 bench
+bin/*

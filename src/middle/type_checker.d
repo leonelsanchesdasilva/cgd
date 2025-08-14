@@ -258,7 +258,15 @@ class TypeChecker
                 "Operator '" ~ operator ~ "' cannot be applied to types '" ~
                     leftType ~ "' and '" ~ rightType ~ "'"
             );
-
+        case "~":
+            if (leftType == "string" || rightType == "string")
+            {
+                return createTypeInfo("string");
+            }
+            throw new Exception(
+                "Operator '" ~ operator ~ "' cannot be applied to types '" ~
+                    leftType ~ "' and '" ~ rightType ~ "'"
+            );
         default:
             throw new Exception("Unknown operator: " ~ operator);
         }
