@@ -279,12 +279,14 @@ class IfStatementCore : Statement
     Expression condition;
     Statement thenStmt;
     Statement elseStmt;
+    Statement elseIf;
 
-    this(Expression condition, Statement thenStmt, Statement elseStmt = null)
+    this(Expression condition, Statement thenStmt, Statement elseStmt = null, Statement elseIf = null)
     {
         this.condition = condition;
         this.thenStmt = thenStmt;
         this.elseStmt = elseStmt;
+        this.elseIf = elseIf;
     }
 
     override string generateD(int indentLevel = 0)
@@ -294,15 +296,37 @@ class IfStatementCore : Statement
 
         if (elseStmt)
         {
-            result ~= indent(indentLevel) ~ "else\n";
             result ~= elseStmt.generateD(indentLevel);
+        }
+
+        if (elseIf)
+        {
+            result ~= indent(indentLevel) ~ "else ";
+            result ~= elseIf.generateD(indentLevel);
         }
 
         return result;
     }
 }
 
-class WhileStatement : Statement
+class ElseStatementCore : Statement
+{
+    Expression condition;
+    Statement thenStmt;
+
+    this(Statement thenStmt)
+    {
+        this.thenStmt = thenStmt;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        string result = thenStmt.generateD(indentLevel) ~ "\n";
+        return result;
+    }
+}
+
+class WhileStatementCore : Statement
 {
     Expression condition;
     Statement body;
@@ -318,6 +342,59 @@ class WhileStatement : Statement
         string result = indent(indentLevel) ~ "while (" ~ condition.generateD() ~ ")\n";
         result ~= body.generateD(indentLevel);
         return result;
+    }
+}
+
+class ForStatementCore : Statement
+{
+    Statement initialization;
+    Expression condition;
+    Statement increment;
+    Statement body;
+
+    this(Statement initialization, Expression condition, Statement increment, Statement body)
+    {
+        this.initialization = initialization;
+        this.condition = condition;
+        this.increment = increment;
+        this.body = body;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        auto result = appender!string();
+        result.put(indent(indentLevel) ~ "for (");
+
+        if (initialization)
+        {
+            string initStr = initialization.generateD(0);
+            if (initStr.endsWith(";"))
+            {
+                initStr = initStr[0 .. $ - 1];
+            }
+            result.put(initStr);
+        }
+        result.put("; ");
+
+        if (condition)
+        {
+            result.put(condition.generateD());
+        }
+        result.put("; ");
+
+        if (increment)
+        {
+            string incStr = increment.generateD(0);
+            if (incStr.endsWith(";"))
+            {
+                incStr = incStr[0 .. $ - 1];
+            }
+            result.put(incStr);
+        }
+
+        result.put(")\n");
+        result.put(body.generateD(indentLevel));
+        return result.data;
     }
 }
 

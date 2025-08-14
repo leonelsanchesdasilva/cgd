@@ -31,16 +31,27 @@ public:
 
         // Vamos adicionar isso aqui temporariamente
         StdLibModuleBuilder mod = new StdLibModuleBuilder("io");
-        FunctionBuilder func = new FunctionBuilder("escreva", mod)
+        importedModules["io"] = true;
+
+        auto fn1 = new FunctionBuilder("escreva", mod)
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
             .customTargetType("void")
             .libraryName("io")
             .generateDExternComplete();
 
-        auto io = func.done();
-        importedModules["io"] = true;
-        availableStdFunctions["escreva"] = io.getFunction("escreva");
+        auto fn2 = new FunctionBuilder("escrevaln", mod)
+            .returns(createTypeInfo(TypesNative.NULL))
+            .variadic()
+            .customTargetType("void")
+            .libraryName("io")
+            .generateDExternComplete();
+
+        auto escreva = fn1.done();
+        auto escrevaln = fn2.done();
+
+        availableStdFunctions["escreva"] = escreva.getFunction("escreva");
+        availableStdFunctions["escrevaln"] = escrevaln.getFunction("escrevaln");
     }
 
     Program semantic(Program program)
@@ -113,6 +124,18 @@ private:
         case NodeType.IfStatement:
             analyzedNode = this.analyzeIfStatement(cast(IfStatement) node);
             break;
+        case NodeType.ElseStatement:
+            analyzedNode = this.analyzeElseStatement(cast(ElseStatement) node);
+            break;
+        case NodeType.ForStatement:
+            analyzedNode = this.analyzeForStatement(cast(ForStatement) node);
+            break;
+        case NodeType.WhileStatement:
+            analyzedNode = this.analyzeWhileStatement(cast(WhileStatement) node);
+            break;
+        case NodeType.AssignmentDeclaration:
+            analyzedNode = this.analyzeAssignmentDeclaration(cast(AssignmentDeclaration) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -129,6 +152,57 @@ private:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    AssignmentDeclaration analyzeAssignmentDeclaration(AssignmentDeclaration node)
+    {
+        string id = node.id.value.get!string;
+
+        if (!(id in this.currentScope()))
+            throw new Exception(format(
+                    "Não é possível redeclarar uma variável inexistente '%s'.", id));
+
+        node.id = cast(Identifier) this.analyzeIdentifier(node.id);
+        node.value = this.analyzeNode(node.value.get!Stmt);
+
+        return node;
+    }
+
+    WhileStatement analyzeWhileStatement(WhileStatement node)
+    {
+        // this(Stmt cond, Stmt[] body, Loc loc)
+        node.cond = this.analyzeNode(node.cond);
+
+        for (long i; i < node.body.length; i++)
+        {
+            node.body[i] = this.analyzeNode(node.body[i]);
+        }
+
+        return node;
+    }
+
+    ForStatement analyzeForStatement(ForStatement node)
+    {
+        // this(Stmt _init, Stmt cond, Stmt expr, Stmt[] body, Loc loc)
+        node._init = this.analyzeNode(node._init);
+        node.cond = this.analyzeNode(node.cond);
+        node.expr = this.analyzeNode(node.expr);
+
+        for (long i; i < node.body.length; i++)
+        {
+            node.body[i] = this.analyzeNode(node.body[i]);
+        }
+
+        return node;
+    }
+
+    ElseStatement analyzeElseStatement(ElseStatement node)
+    {
+        for (long i; i < node.primary.length; i++)
+        {
+            node.primary[i] = this.analyzeNode(node.primary[i]);
+        }
+        return node;
     }
 
     IfStatement analyzeIfStatement(IfStatement node)
@@ -373,7 +447,7 @@ private:
         Stmt[] analyzedBlock;
         bool hasReturn = false;
 
-        foreach (Stmt stmt; node.block)
+        foreach (Stmt stmt; node.body)
         {
             Stmt analyzedStmt = this.analyzeNode(stmt);
             analyzedBlock ~= analyzedStmt;
@@ -405,7 +479,7 @@ private:
 
         node.args = args;
         // writeln("T: ", node.args[0].type.baseType);
-        node.block = analyzedBlock;
+        node.body = analyzedBlock;
         node.type = returnType;
         node.context = this.currentScope();
         this.popScope();
@@ -438,6 +512,13 @@ private:
     {
         Stmt left = this.analyzeNode(node.left);
         Stmt right = this.analyzeNode(node.right);
+
+        if (node.op == "+" && (left.type.baseType == TypesNative.STRING || right.type.baseType == TypesNative
+                .STRING))
+        {
+            // Concat
+            node.op = "~";
+        }
 
         FTypeInfo resultType = this.typeChecker.checkBinaryExprTypes(left, right, node.op);
 

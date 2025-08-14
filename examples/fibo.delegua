@@ -1,0 +1,12 @@
+função fibonacci(n: inteiro): inteiro {
+    se n == 0 retorna 0    
+    se n == 1 retorna 1
+    retorna fibonacci(n - 1) + fibonacci(n - 2)
+}
+
+var resultado = fibonacci(40)
+escrevaln('resultado: ', resultado)
+
+se (resultado != 102334155) {
+    escrevaln('o resultado está errado!')
+}

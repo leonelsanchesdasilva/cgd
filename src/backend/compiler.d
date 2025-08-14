@@ -20,7 +20,7 @@ private:
     string filename;
     string arquivoSaida;
     // Futuramente irá alterar para usar um caminho fixo
-    // Ficaria em $HOME/.dgc/stdlib
+    // Ficaria em $HOME/.cgd/stdlib
     string stdlibPath = "stdlib"; // Diretório das bibliotecas padrão
 
 public:
@@ -37,19 +37,7 @@ public:
         writeln("🔨 Iniciando compilação...");
 
         CodeGenerator codegen = this.builder.codegen;
-
-        if (this.semantic.availableStdFunctions.length > 0)
-        {
-            writeln("📚 Adicionando funções da biblioteca padrão...");
-            foreach (string name, StdLibFunction fn; this.semantic.availableStdFunctions)
-            {
-                codegen.currentModule.addStdFunction(fn.ir);
-                writefln("   ✓ Função '%s' adicionada", name);
-            }
-        }
-
         writeln("⚙️  Gerando código...");
-
         codegen.saveToFile(filename);
         writefln("💾 Código salvo em: '%s'", filename);
 

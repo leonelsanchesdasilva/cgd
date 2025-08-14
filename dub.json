@@ -3,9 +3,9 @@
 		"Fernando Dev"
 	],
 	"copyright": "Copyright © 2025, Fernando Dev",
-	"description": "Delegua General Compiler",
+	"description": "Compilador Geral Delégua",
 	"license": "MIT",
-	"name": "dgc",
+	"name": "cgd",
 	"targetType": "executable",
 	"buildTypes": {
 		"debug": {

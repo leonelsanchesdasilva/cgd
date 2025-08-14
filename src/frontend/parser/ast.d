@@ -18,9 +18,12 @@ enum NodeType
     VariableDeclaration,
     ReturnStatement,
     FunctionDeclaration,
+    AssignmentDeclaration,
 
     IfStatement,
     ElseStatement,
+    ForStatement,
+    WhileStatement,
 
     IntLiteral,
     FloatLiteral,
@@ -210,9 +213,9 @@ class ElifStatement : IfStatement
 
 class ElseStatement : Stmt
 {
-    Stmt primary;
+    Stmt[] primary;
 
-    this(Stmt primary, FTypeInfo type, Variant value, Loc loc)
+    this(Stmt[] primary, FTypeInfo type, Variant value, Loc loc)
     {
         this.kind = NodeType.ElseStatement;
         this.primary = primary;
@@ -288,15 +291,15 @@ class FunctionDeclaration : Stmt
 {
     Identifier id;
     FunctionArgs args;
-    Stmt[] block;
+    Stmt[] body;
     SymbolInfo[string] context;
 
-    this(Identifier id, FunctionArgs args, Stmt[] block, FTypeInfo type, Loc loc)
+    this(Identifier id, FunctionArgs args, Stmt[] body, FTypeInfo type, Loc loc)
     {
         this.id = id;
         this.args = args;
         this.kind = NodeType.FunctionDeclaration;
-        this.block = block;
+        this.body = body;
         this.loc = loc;
         this.type = type;
         this.value = null;
@@ -315,5 +318,59 @@ class ReturnStatement : Stmt
         this.value = null;
         this.loc = loc;
         this.type = createTypeInfo(TypesNative.NULL);
+    }
+}
+
+class ForStatement : Stmt
+{
+    // varDecl, cond, expr, body
+    // for var i = 10; cond; expr {}
+    // for i = 10; cond; expr {}
+    Stmt _init;
+    Stmt cond;
+    Stmt expr;
+    Stmt[] body;
+
+    this(Stmt _init, Stmt cond, Stmt expr, Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.ForStatement;
+        this.value = null;
+        this._init = _init;
+        this.cond = cond;
+        this.expr = expr;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL);
+    }
+}
+
+class WhileStatement : Stmt
+{
+    // while cond body
+    Stmt cond;
+    Stmt[] body;
+
+    this(Stmt cond, Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.WhileStatement;
+        this.value = null;
+        this.cond = cond;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL);
+    }
+}
+
+class AssignmentDeclaration : Stmt
+{
+    Identifier id;
+
+    this(Identifier id, Stmt value, FTypeInfo type, Loc loc)
+    {
+        this.kind = NodeType.AssignmentDeclaration;
+        this.id = id;
+        this.value = value;
+        this.type = type;
+        this.loc = loc;
     }
 }

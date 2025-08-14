@@ -15,8 +15,8 @@ import backend.compiler;
 alias fileWrite = std.file.write;
 
 enum string VERSAO = "0.0.1";
-enum string NOME_PROGRAMA = "dgc";
-enum string NOME_COMPLETO = "Delegua General Compiler";
+enum string NOME_PROGRAMA = "cgd";
+enum string NOME_COMPLETO = "Compilador Geral Delégua";
 
 void main(string[] args)
 {
@@ -48,8 +48,8 @@ void main(string[] args)
 
 		if (args.length < 3)
 		{
-			writeln("dgc: erro: comando ou arquivo não especificado");
-			writeln("Digite 'dgc --help' para mais informações.");
+			writeln("cgd: erro: comando ou arquivo não especificado");
+			writeln("Digite 'cgd --help' para mais informações.");
 			return;
 		}
 
@@ -58,21 +58,21 @@ void main(string[] args)
 
 		if (comando != "compilar" && comando != "transpilar")
 		{
-			writefln("dgc: erro: comando desconhecido '%s'", comando);
+			writefln("cgd: erro: comando desconhecido '%s'", comando);
 			writeln("Comandos disponíveis: compilar, transpilar");
-			writeln("Digite 'dgc --help' para mais informações.");
+			writeln("Digite 'cgd --help' para mais informações.");
 			return;
 		}
 
 		if (!exists(arquivo))
 		{
-			writefln("dgc: erro: arquivo '%s' não encontrado", arquivo);
+			writefln("cgd: erro: arquivo '%s' não encontrado", arquivo);
 			return;
 		}
 
 		if (!isFile(arquivo))
 		{
-			writefln("dgc: erro: '%s' não é um arquivo válido", arquivo);
+			writefln("cgd: erro: '%s' não é um arquivo válido", arquivo);
 			return;
 		}
 
@@ -98,12 +98,12 @@ void main(string[] args)
 	}
 	catch (GetOptException e)
 	{
-		writefln("dgc: erro: %s", e.msg);
-		writeln("Digite 'dgc --help' para mais informações.");
+		writefln("cgd: erro: %s", e.msg);
+		writeln("Digite 'cgd --help' para mais informações.");
 	}
 	catch (Exception e)
 	{
-		writefln("dgc: erro interno: %s", e.msg);
+		writefln("cgd: erro interno: %s", e.msg);
 		if (verboso)
 		{
 			writeln("Informações de debug:");
@@ -114,29 +114,29 @@ void main(string[] args)
 
 void mostrarMensagemAjuda()
 {
-	writeln("Uso: dgc [OPÇÕES] COMANDO ARQUIVO");
+	writeln("Uso: cgd [OPÇÕES] COMANDO ARQUIVO");
 	writeln("");
 	writeln("Comandos:");
 	writeln("  compilar    Compila o arquivo Delegua para código executável");
 	writeln("  transpilar  Transpila o arquivo Delegua para código D");
 	writeln("");
 	writeln("Opções:");
-	writeln("  -o, --output ARQUIVO   Especifica o arquivo de saída");
+	writeln("  -o, --output ARQUIVO  Especifica o arquivo de saída");
 	writeln("  -v, --version         Mostra a versão do compilador");
 	writeln("  -h, --help            Mostra esta mensagem de ajuda");
 	writeln("  --verbose             Modo verboso - mostra informações detalhadas");
 	writeln("");
 	writeln("Exemplos:");
-	writeln("  dgc compilar arquivo.delegua");
-	writeln("  dgc transpilar arquivo.delegua -o saida.d");
-	writeln("  dgc compilar arquivo.delegua --output meuapp");
+	writeln("  cgd compilar arquivo.delegua");
+	writeln("  cgd transpilar arquivo.delegua -o saida.d");
+	writeln("  cgd compilar arquivo.delegua --output meuapp");
 	writeln("");
 	mostrarCopyright();
 }
 
 void mostrarVersaoPrograma()
 {
-	writefln("%s (%s) %s", NOME_COMPLETO, NOME_PROGRAMA, VERSAO);
+	writefln("%s (%s) v%s", NOME_COMPLETO, NOME_PROGRAMA, VERSAO);
 }
 
 void mostrarCopyright()
@@ -232,11 +232,11 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 	}
 	catch (FileException e)
 	{
-		writefln("dgc: erro: não foi possível ler o arquivo '%s': %s", arquivo, e.msg);
+		writefln("cgd: erro: não foi possível ler o arquivo '%s': %s", arquivo, e.msg);
 	}
 	catch (Exception e)
 	{
-		writefln("dgc: erro durante o processamento: %s", e.msg);
+		writefln("cgd: erro durante o processamento: %s", e.msg);
 		if (verboso)
 		{
 			writeln("Detalhes do erro:");

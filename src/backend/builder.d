@@ -142,6 +142,14 @@ private:
             return GenerationResult(genReturnStatement(cast(ReturnStatement) node));
         case NodeType.IfStatement:
             return GenerationResult(genIfStatement(cast(IfStatement) node));
+        case NodeType.ElseStatement:
+            return GenerationResult(genElseStatement(cast(ElseStatement) node));
+        case NodeType.WhileStatement:
+            return GenerationResult(genWhileStatement(cast(WhileStatement) node));
+        case NodeType.ForStatement:
+            return GenerationResult(genForStatement(cast(ForStatement) node));
+        case NodeType.AssignmentDeclaration:
+            return GenerationResult(genAssignmentDeclaration(cast(AssignmentDeclaration) node));
 
         case NodeType.StringLiteral:
             return GenerationResult(genStringLiteral(cast(StringLiteral) node));
@@ -205,11 +213,6 @@ private:
         {
             auto result = generate(stmt);
 
-            // writeln("DEBUG: Processando statement do tipo: ", stmt.kind);
-            // writeln("DEBUG: Result type: ", result.type);
-
-            // if (stmt.kind == NodeType.VariableDeclaration)
-            // {
             if (result.type == typeid(Statement))
             {
                 auto _stmt = result.get!Statement;
@@ -228,40 +231,105 @@ private:
                     mainFunc.addStatement(exprStmt);
                 }
             }
-            // }
         }
 
         popScope();
         return null;
     }
 
-    Statement genIfStatement(IfStatement node)
+    void genBlock(GenerationResult result, ref Statement[] body)
+    {
+        if (result.type == typeid(Statement))
+        {
+            auto statement = result.get!Statement;
+            if (statement !is null)
+            {
+                body ~= statement;
+            }
+        }
+        else if (result.type == typeid(Expression))
+        {
+            auto expr = result.get!Expression;
+            if (expr !is null)
+            {
+                body ~= new ExpressionStatement(expr);
+            }
+        }
+    }
+
+    Statement genForStatement(ForStatement node)
+    {
+        Statement _init = generate(node._init).get!Statement;
+        Expression cond = generate(node.cond).get!Expression;
+        Statement incr = generate(node.expr).get!Statement;
+
+        Statement[] body = [];
+        foreach (Stmt stmt; node.body)
+        {
+            auto result = this.generate(stmt);
+            genBlock(result, body);
+        }
+
+        auto _for = new ForStatementCore(_init, cond, incr, new BlockStatement(body));
+        return _for;
+    }
+
+    Statement genWhileStatement(WhileStatement node)
+    {
+        Expression cond = generate(node.cond).get!Expression;
+        Statement[] body = [];
+        foreach (Stmt stmt; node.body)
+        {
+            auto result = this.generate(stmt);
+            genBlock(result, body);
+        }
+
+        auto _while = new WhileStatementCore(cond, new BlockStatement(body));
+        return _while;
+    }
+
+    Statement genAssignmentDeclaration(AssignmentDeclaration node)
+    {
+        auto varName = node.id.value.get!string;
+        Expression expr = generate(node.value.get!Stmt).get!Expression;
+        auto ass = new AssignmentStatement(varName, expr);
+        return ass;
+    }
+
+    Statement genElseStatement(ElseStatement node)
     {
         Statement[] stmts = [];
         foreach (Stmt stmt; node.primary)
         {
             auto result = this.generate(stmt);
-            if (result.type == typeid(Statement))
-            {
-                auto statement = result.get!Statement;
-                if (statement !is null)
-                {
-                    stmts ~= statement;
-                }
-            }
-            else if (result.type == typeid(Expression))
-            {
-                auto expr = result.get!Expression;
-                if (expr !is null)
-                {
-                    stmts ~= new ExpressionStatement(expr);
-                }
-            }
+            genBlock(result, stmts);
+        }
+
+        auto then = new BlockStatement(stmts);
+        auto _else = new ElseStatementCore(then);
+        return _else;
+    }
+
+    Statement genIfStatement(IfStatement node)
+    {
+        Statement[] stmts = [];
+        Statement elseIf = null;
+        Statement elseStmt = null;
+
+        if (!node.secondary.isNull && node.secondary != null)
+        {
+            elseIf = this.generate(node.secondary.get).get!Statement;
+        }
+
+        foreach (Stmt stmt; node.primary)
+        {
+            auto result = this.generate(stmt);
+            genBlock(result, stmts);
         }
 
         auto condition = this.generate(node.condition).get!Expression;
         auto then = new BlockStatement(stmts);
-        auto _if = new IfStatementCore(condition, then);
+        auto _if = new IfStatementCore(condition, then, elseStmt, elseIf);
         return _if;
     }
 
@@ -410,26 +478,22 @@ private:
             params
         );
 
-        // Salva a função atual e define a nova como atual
         auto previousFunc = currentFunc;
         scope (exit)
             currentFunc = previousFunc;
 
         currentFunc = func;
 
-        // Cria novo escopo para a função
         pushScope();
         scope (exit)
-            popScope(); // Remove escopo da função ao sair
+            popScope();
 
-        // Adiciona parâmetros ao escopo da função
         foreach (arg; node.args)
         {
             addSymbol(arg.id.value.get!string, arg.type, false);
         }
 
-        // Processa o corpo da função
-        foreach (stmt; node.block)
+        foreach (stmt; node.body)
         {
             auto result = generate(stmt);
             if (result.type == typeid(Statement))
@@ -442,10 +506,8 @@ private:
             }
         }
 
-        // Adiciona a função ao módulo
         codegen.currentModule.addFunction(func);
 
-        // Não retorna nada porque declarações de função não são statements
         return null;
     }
 
@@ -522,5 +584,14 @@ public:
     {
         codegen.currentModule.addFunction(mainFunc);
         this.genProgram(this.program);
+
+        // Adicionando as bibliotecas
+        if (this.semantic.availableStdFunctions.length > 0)
+        {
+            foreach (string name, StdLibFunction fn; this.semantic.availableStdFunctions)
+            {
+                codegen.currentModule.addStdFunction(fn.ir);
+            }
+        }
     }
 }
