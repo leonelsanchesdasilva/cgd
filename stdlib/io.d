@@ -61,7 +61,7 @@ extern (D) void escreva(...)
 }
 
 // Versão adicional com quebra de linha
-pragma(mangle, "ioln")
+pragma(mangle, "io")
 extern (D) void escrevaln(...)
 {
     foreach (i; 0 .. _arguments.length)

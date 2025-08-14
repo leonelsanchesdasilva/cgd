@@ -210,9 +210,9 @@ class ElifStatement : IfStatement
 
 class ElseStatement : Stmt
 {
-    Stmt primary;
+    Stmt[] primary;
 
-    this(Stmt primary, FTypeInfo type, Variant value, Loc loc)
+    this(Stmt[] primary, FTypeInfo type, Variant value, Loc loc)
     {
         this.kind = NodeType.ElseStatement;
         this.primary = primary;

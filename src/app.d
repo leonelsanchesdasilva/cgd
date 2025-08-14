@@ -136,7 +136,7 @@ void mostrarMensagemAjuda()
 
 void mostrarVersaoPrograma()
 {
-	writefln("%s (%s) %s", NOME_COMPLETO, NOME_PROGRAMA, VERSAO);
+	writefln("%s (%s) v%s", NOME_COMPLETO, NOME_PROGRAMA, VERSAO);
 }
 
 void mostrarCopyright()

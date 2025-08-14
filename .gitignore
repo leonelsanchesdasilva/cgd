@@ -14,3 +14,5 @@ cgd-test-*
 *.obj
 *.lst
 tests/gramaticas
+performance
+bench

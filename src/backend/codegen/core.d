@@ -279,12 +279,14 @@ class IfStatementCore : Statement
     Expression condition;
     Statement thenStmt;
     Statement elseStmt;
+    Statement elseIf;
 
-    this(Expression condition, Statement thenStmt, Statement elseStmt = null)
+    this(Expression condition, Statement thenStmt, Statement elseStmt = null, Statement elseIf = null)
     {
         this.condition = condition;
         this.thenStmt = thenStmt;
         this.elseStmt = elseStmt;
+        this.elseIf = elseIf;
     }
 
     override string generateD(int indentLevel = 0)
@@ -294,10 +296,32 @@ class IfStatementCore : Statement
 
         if (elseStmt)
         {
-            result ~= indent(indentLevel) ~ "else\n";
             result ~= elseStmt.generateD(indentLevel);
         }
 
+        if (elseIf)
+        {
+            result ~= indent(indentLevel) ~ "else ";
+            result ~= elseIf.generateD(indentLevel);
+        }
+
+        return result;
+    }
+}
+
+class ElseStatementCore : Statement
+{
+    Expression condition;
+    Statement thenStmt;
+
+    this(Statement thenStmt)
+    {
+        this.thenStmt = thenStmt;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        string result = thenStmt.generateD(indentLevel) ~ "\n";
         return result;
     }
 }

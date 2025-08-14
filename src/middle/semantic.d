@@ -31,16 +31,27 @@ public:
 
         // Vamos adicionar isso aqui temporariamente
         StdLibModuleBuilder mod = new StdLibModuleBuilder("io");
-        FunctionBuilder func = new FunctionBuilder("escreva", mod)
+        importedModules["io"] = true;
+
+        auto fn1 = new FunctionBuilder("escreva", mod)
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
             .customTargetType("void")
             .libraryName("io")
             .generateDExternComplete();
 
-        auto io = func.done();
-        importedModules["io"] = true;
-        availableStdFunctions["escreva"] = io.getFunction("escreva");
+        auto fn2 = new FunctionBuilder("escrevaln", mod)
+            .returns(createTypeInfo(TypesNative.NULL))
+            .variadic()
+            .customTargetType("void")
+            .libraryName("io")
+            .generateDExternComplete();
+
+        auto escreva = fn1.done();
+        auto escrevaln = fn2.done();
+
+        availableStdFunctions["escreva"] = escreva.getFunction("escreva");
+        availableStdFunctions["escrevaln"] = escrevaln.getFunction("escrevaln");
     }
 
     Program semantic(Program program)
@@ -113,6 +124,9 @@ private:
         case NodeType.IfStatement:
             analyzedNode = this.analyzeIfStatement(cast(IfStatement) node);
             break;
+        case NodeType.ElseStatement:
+            analyzedNode = this.analyzeElseStatement(cast(ElseStatement) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -129,6 +143,15 @@ private:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    ElseStatement analyzeElseStatement(ElseStatement node)
+    {
+        for (long i; i < node.primary.length; i++)
+        {
+            node.primary[i] = this.analyzeNode(node.primary[i]);
+        }
+        return node;
     }
 
     IfStatement analyzeIfStatement(IfStatement node)

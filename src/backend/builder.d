@@ -142,6 +142,8 @@ private:
             return GenerationResult(genReturnStatement(cast(ReturnStatement) node));
         case NodeType.IfStatement:
             return GenerationResult(genIfStatement(cast(IfStatement) node));
+        case NodeType.ElseStatement:
+            return GenerationResult(genElseStatement(cast(ElseStatement) node));
 
         case NodeType.StringLiteral:
             return GenerationResult(genStringLiteral(cast(StringLiteral) node));
@@ -235,10 +237,46 @@ private:
         return null;
     }
 
+    Statement genElseStatement(ElseStatement node)
+    {
+        Statement[] stmts = [];
+        foreach (Stmt stmt; node.primary)
+        {
+            auto result = this.generate(stmt);
+            if (result.type == typeid(Statement))
+            {
+                auto statement = result.get!Statement;
+                if (statement !is null)
+                {
+                    stmts ~= statement;
+                }
+            }
+            else if (result.type == typeid(Expression))
+            {
+                auto expr = result.get!Expression;
+                if (expr !is null)
+                {
+                    stmts ~= new ExpressionStatement(expr);
+                }
+            }
+        }
+
+        auto then = new BlockStatement(stmts);
+        auto _else = new ElseStatementCore(then);
+        return _else;
+    }
+
     Statement genIfStatement(IfStatement node)
     {
-        writeln(node.secondary);
         Statement[] stmts = [];
+        Statement elseIf = null;
+        Statement elseStmt = null;
+
+        if (!node.secondary.isNull && node.secondary != null)
+        {
+            elseIf = this.generate(node.secondary.get).get!Statement;
+        }
+
         foreach (Stmt stmt; node.primary)
         {
             auto result = this.generate(stmt);
@@ -262,7 +300,7 @@ private:
 
         auto condition = this.generate(node.condition).get!Expression;
         auto then = new BlockStatement(stmts);
-        auto _if = new IfStatementCore(condition, then);
+        auto _if = new IfStatementCore(condition, then, elseStmt, elseIf);
         return _if;
     }
 
@@ -523,5 +561,14 @@ public:
     {
         codegen.currentModule.addFunction(mainFunc);
         this.genProgram(this.program);
+
+        // Adicionando as bibliotecas
+        if (this.semantic.availableStdFunctions.length > 0)
+        {
+            foreach (string name, StdLibFunction fn; this.semantic.availableStdFunctions)
+            {
+                codegen.currentModule.addStdFunction(fn.ir);
+            }
+        }
     }
 }
