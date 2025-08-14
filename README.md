@@ -6,6 +6,8 @@
 
 Compilador para a linguagem de programação [Delegua](https://github.com/DesignLiquido/delegua).
 
+**Site oficial:** [fernandothedev.github.io/cgd/](https://fernandothedev.github.io/cgd/)
+
 **Versão:** `0.0.1`
 
 ## Plataformas suportadas
