@@ -65,28 +65,26 @@ class TypeChecker
         throw new Exception("Unsupported type mapping for " ~ sourceType);
     }
 
-    public string getTypeString(string type)
+    public string getTypeStringFromNative(TypesNative nativeType)
     {
-        switch (type)
+        final switch (nativeType)
         {
-        case "i1":
-            return "i1";
-        case "i32":
-            return "i32";
-        case "i64":
-            return "i64";
-        case "double":
+        case TypesNative.NULL:
+            return "typeof(null)";
+        case TypesNative.BOOL:
+            return "bool";
+        case TypesNative.FLOAT:
             return "double";
-        case "i128":
+        case TypesNative.STRING:
+            return "string";
+        case TypesNative.INT:
             return "long";
-        case "string":
-            return "i8*";
-        case "void":
+        case TypesNative.CHAR:
+            return "char";
+        case TypesNative.VOID:
             return "void";
-        case "ptr":
-            return "ptr";
-        default:
-            return "i8*";
+        case TypesNative.ID:
+            return "void*";
         }
     }
 
@@ -114,7 +112,7 @@ class TypeChecker
         {
             return createTypeInfo(leftType);
         }
-        return createTypeInfo(cast(TypesNative) rightType);
+        return createTypeInfo(stringToTypesNative(rightType));
     }
 
     public bool areTypesCompatible(string sourceType, string targetType)
@@ -128,10 +126,10 @@ class TypeChecker
         }
 
         string[][string] compatibilityMap = [
-            "int": ["float", "double", "i64", "long", "bool", "i128"],
+            "int": ["float", "double", "i64", "long", "bool", "i128", "string"],
             "i32": ["float", "double", "i64", "long", "bool"],
-            "float": ["double", "int", "i32", "i64", "long", "bool"],
-            "double": ["int", "i32", "float", "i64", "long", "bool"],
+            "float": ["double", "int", "i32", "i64", "long", "bool", "string"],
+            "double": ["int", "i32", "float", "i64", "long", "bool", "string"],
             "binary": ["int", "i32", "i64", "long"],
             "i64": ["float", "double", "bool"],
             "long": ["float", "double", "bool"],

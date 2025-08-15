@@ -221,11 +221,11 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 
 			if (verboso)
 			{
-				writefln("Transpiração concluída com sucesso. Arquivo D gerado: %s", arquivoSaida);
+				writefln("Transpilação concluída com sucesso. Arquivo D gerado: %s", arquivoSaida);
 			}
 			else
 			{
-				writefln("Transpiração de '%s' concluída.", arquivo);
+				writefln("Transpilação de '%s' concluída.", arquivo);
 			}
 		}
 

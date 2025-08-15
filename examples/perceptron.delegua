@@ -3,7 +3,7 @@ var pesoInicial2 = 0.4
 var entrada1 = 1
 var entrada2 = 1
 var erro = 1
-var resultadoEsperado
+var resultadoEsperado = 0
 enquanto (erro != 0){
     se (entrada1 == 1) {
         se (entrada2 == 1) {
@@ -14,7 +14,7 @@ enquanto (erro != 0){
     }
     var somatoria = pesoInicial1 * entrada1
     somatoria = pesoInicial2 * entrada2 + somatoria
-    var resultado
+    var resultado = 0
     se (somatoria < 1) {
         resultado = 0
     } senão {
@@ -22,11 +22,11 @@ enquanto (erro != 0){
             resultado = 1
         }
     }
-    escreva('resultado: ' + texto(resultado))
+    escreva('resultado: ', resultado, '\\n')
     erro = resultadoEsperado - resultado
-    escreva('p1: ' + texto(pesoInicial1))
-    escreva('p2: ' + texto(pesoInicial2))
+    escreva('p1: ', pesoInicial1, '\\n')
+    escreva('p2: ', pesoInicial2, '\\n')
     pesoInicial1 = 0.1 * entrada1 * erro + pesoInicial1
     pesoInicial2 = 0.1 * entrada2 * erro + pesoInicial2
-    escreva('erro: ' + texto(erro))
+    escreva('erro: ', erro, '\\n')
 }
