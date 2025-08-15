@@ -14,7 +14,7 @@ import backend.compiler;
 
 alias fileWrite = std.file.write;
 
-enum string VERSAO = "0.0.1";
+enum string VERSAO = "0.0.2";
 enum string NOME_PROGRAMA = "cgd";
 enum string NOME_COMPLETO = "Compilador Geral Delégua";
 

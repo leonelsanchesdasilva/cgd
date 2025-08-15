@@ -16,6 +16,9 @@ enum NodeType
     Identifier,
 
     VariableDeclaration,
+    UninitializedVariableDeclaration,
+    MultipleVariableDeclaration,
+    MultipleUninitializedVariableDeclaration,
     ReturnStatement,
     FunctionDeclaration,
     AssignmentDeclaration,
@@ -154,6 +157,102 @@ class Identifier : Stmt
     }
 }
 
+class UninitializedVariableDeclaration : Stmt
+{
+    Identifier id;
+    bool mut;
+
+    this(Identifier id, FTypeInfo type, bool mut, Loc loc)
+    {
+        this.kind = NodeType.UninitializedVariableDeclaration;
+        this.id = id;
+        this.type = type;
+        this.mut = mut;
+        this.loc = loc;
+        this.value = null;
+    }
+}
+
+struct VariablePair
+{
+    Identifier id;
+    Stmt value;
+    FTypeInfo type;
+    bool mut;
+
+    this(Identifier id, Stmt value, FTypeInfo type, bool mut)
+    {
+        this.id = id;
+        this.value = value;
+        this.type = type;
+        this.mut = mut;
+    }
+}
+
+class MultipleVariableDeclaration : Stmt
+{
+    VariablePair[] declarations;
+    FTypeInfo commonType;
+
+    this(VariablePair[] declarations, FTypeInfo commonType, Loc loc)
+    {
+        this.kind = NodeType.MultipleVariableDeclaration;
+        this.declarations = declarations;
+        this.commonType = commonType;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+        this.value = null;
+    }
+
+    Identifier[] getIdentifiers()
+    {
+        Identifier[] ids;
+        foreach (decl; declarations)
+        {
+            ids ~= decl.id;
+        }
+        return ids;
+    }
+
+    Stmt[] getValues()
+    {
+        Stmt[] values;
+        foreach (decl; declarations)
+        {
+            values ~= decl.value;
+        }
+        return values;
+    }
+
+    FTypeInfo[] getTypes()
+    {
+        FTypeInfo[] types;
+        foreach (decl; declarations)
+        {
+            types ~= decl.type;
+        }
+        return types;
+    }
+}
+
+class MultipleUninitializedVariableDeclaration : Stmt
+{
+    Identifier[] ids;
+    FTypeInfo commonType;
+    bool mut;
+
+    this(Identifier[] ids, FTypeInfo commonType, bool mut, Loc loc)
+    {
+        this.kind = NodeType.MultipleUninitializedVariableDeclaration;
+        this.ids = ids;
+        this.commonType = commonType;
+        this.mut = mut;
+        this.loc = loc;
+        this.type = commonType;
+        this.value = null;
+    }
+}
+
 class VariableDeclaration : Stmt
 {
     Identifier id;
@@ -167,6 +266,65 @@ class VariableDeclaration : Stmt
         this.type = type;
         this.mut = mut;
         this.loc = loc;
+    }
+
+    bool isInitialized()
+    {
+        return this.value.hasValue();
+    }
+}
+
+class VariableDeclarationFactory
+{
+    static VariableDeclaration createInitialized(Identifier id, Stmt value, FTypeInfo type, bool mut, Loc loc)
+    {
+        return new VariableDeclaration(id, value, type, mut, loc);
+    }
+
+    static UninitializedVariableDeclaration createUninitialized(Identifier id, FTypeInfo type, bool mut, Loc loc)
+    {
+        return new UninitializedVariableDeclaration(id, type, mut, loc);
+    }
+
+    static MultipleVariableDeclaration createMultipleInitialized(
+        Identifier[] ids,
+        Stmt[] values,
+        FTypeInfo commonType,
+        bool mut,
+        Loc loc
+    )
+    {
+        if (ids.length != values.length)
+        {
+            throw new Exception(
+                "Número de identificadores deve corresponder ao número de valores");
+        }
+
+        VariablePair[] pairs;
+        foreach (i; 0 .. ids.length)
+        {
+            FTypeInfo finalType = commonType.baseType != TypesNative.NULL ? commonType
+                : values[i].type;
+            pairs ~= VariablePair(ids[i], values[i], finalType, mut);
+        }
+
+        return new MultipleVariableDeclaration(pairs, commonType, loc);
+    }
+
+    static MultipleUninitializedVariableDeclaration createMultipleUninitialized(
+        Identifier[] ids,
+        FTypeInfo commonType,
+        bool mut,
+        Loc loc
+    )
+    {
+        if (commonType.baseType == TypesNative.NULL)
+        {
+            throw new Exception(
+                "Tipo deve ser especificado para declarações múltiplas não inicializadas");
+        }
+
+        return new MultipleUninitializedVariableDeclaration(ids, commonType, mut, loc);
     }
 }
 

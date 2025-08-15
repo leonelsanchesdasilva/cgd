@@ -1,9 +1,5 @@
-var pesoInicial1 = 0.3
-var pesoInicial2 = 0.4
-var entrada1 = 1
-var entrada2 = 1
-var erro = 1
-var resultadoEsperado = 0
+var pesoInicial1, pesoInicial2, entrada1, entrada2, erro = 0.3, 0.4, 1, 1, 1
+var resultadoEsperado: número;
 enquanto (erro != 0){
     se (entrada1 == 1) {
         se (entrada2 == 1) {
@@ -14,7 +10,7 @@ enquanto (erro != 0){
     }
     var somatoria = pesoInicial1 * entrada1
     somatoria = pesoInicial2 * entrada2 + somatoria
-    var resultado = 0
+    var resultado: numero;
     se (somatoria < 1) {
         resultado = 0
     } senão {

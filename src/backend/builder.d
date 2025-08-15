@@ -136,6 +136,16 @@ private:
 
         case NodeType.VariableDeclaration:
             return GenerationResult(genVariableDeclaration(cast(VariableDeclaration) node));
+        case NodeType.UninitializedVariableDeclaration:
+            return GenerationResult(
+                genUninitializedVariableDeclaration(cast(UninitializedVariableDeclaration) node));
+        case NodeType.MultipleVariableDeclaration:
+            return GenerationResult(
+                genMultipleVariableDeclaration(cast(MultipleVariableDeclaration) node));
+        case NodeType.MultipleUninitializedVariableDeclaration:
+            return GenerationResult(
+                genMultipleUninitializedVariableDeclaration(
+                    cast(MultipleUninitializedVariableDeclaration) node));
         case NodeType.FunctionDeclaration:
             return GenerationResult(genFunctionDeclaration(cast(FunctionDeclaration) node));
         case NodeType.ReturnStatement:
@@ -235,6 +245,225 @@ private:
 
         popScope();
         return null;
+    }
+
+    Statement genMultipleUninitializedVariableDeclaration(
+        MultipleUninitializedVariableDeclaration node)
+    {
+        if (node.ids !is null && node.ids.length > 0)
+        {
+            Statement[] declarations;
+
+            foreach (id; node.ids)
+            {
+                auto varName = id.value.get!string;
+                addSymbol(varName, node.commonType, false);
+
+                auto var = new VariableDeclarationCore(
+                    getType(node.commonType),
+                    varName,
+                    null
+                );
+
+                declarations ~= var;
+                this.mainFunc.addStatement(var);
+            }
+
+            return null;
+        }
+        else
+        {
+            throw new Exception(
+                "Declaração não inicializada deve ter pelo menos um identificador.");
+        }
+    }
+
+    Statement genUninitializedVariableDeclaration(UninitializedVariableDeclaration node)
+    {
+        if (node.id !is null)
+        {
+            auto varName = node.id.value.get!string;
+            addSymbol(varName, node.type, false);
+
+            auto var = new VariableDeclarationCore(
+                getType(node.type),
+                varName,
+                null
+            );
+
+            return var;
+        }
+        else
+        {
+            throw new Exception(
+                "Declaração não inicializada deve ter pelo menos um identificador.");
+        }
+    }
+
+    Statement genMultipleVariableDeclaration(MultipleVariableDeclaration node)
+    {
+        if (node.declarations.length == 0)
+        {
+            throw new Exception("Declaração múltipla deve conter pelo menos uma variável.");
+        }
+
+        Statement[] declarations;
+        declarations.reserve(node.declarations.length);
+
+        foreach (decl; node.declarations)
+        {
+            auto varName = decl.id.value.get!string;
+
+            addSymbol(varName, decl.type, false);
+
+            Expression expr = null;
+            if (decl.value !is null)
+            {
+                expr = asExpression(generate(decl.value));
+            }
+            else
+            {
+                expr = createDefaultValue(decl.type);
+            }
+
+            auto var = new VariableDeclarationCore(
+                getType(decl.type),
+                varName,
+                expr
+            );
+
+            declarations ~= var;
+
+            this.mainFunc.addStatement(var);
+        }
+
+        if (declarations.length == 1)
+        {
+            return declarations[0];
+        }
+
+        return null;
+    }
+
+    Statement convertToStatement(GenerationResult result)
+    {
+        if (result.type == typeid(Statement))
+        {
+            return result.get!Statement;
+        }
+        else if (result.type == typeid(Expression))
+        {
+            auto expr = result.get!Expression;
+            return new ExpressionStatement(expr);
+        }
+        else
+        {
+            throw new Exception("Resultado deve ser Statement ou Expression");
+        }
+    }
+
+    void processVariableDeclarationForScope(Stmt node)
+    {
+        switch (node.kind)
+        {
+        case NodeType.VariableDeclaration:
+            auto varDecl = cast(VariableDeclaration) node;
+            addSymbol(varDecl.id.value.get!string, varDecl.type, false);
+            break;
+
+        case NodeType.UninitializedVariableDeclaration:
+            auto uninitDecl = cast(UninitializedVariableDeclaration) node;
+            if (uninitDecl.id !is null)
+            {
+                addSymbol(uninitDecl.id.value.get!string, uninitDecl.type, false);
+            }
+            break;
+
+        case NodeType.MultipleUninitializedVariableDeclaration:
+            auto multiDecl = cast(MultipleUninitializedVariableDeclaration) node;
+            if (multiDecl.ids !is null)
+            {
+                foreach (id; multiDecl.ids)
+                {
+                    addSymbol(id.value.get!string, multiDecl.commonType, false);
+                }
+            }
+            break;
+
+        case NodeType.MultipleVariableDeclaration:
+            auto multiDecl = cast(MultipleVariableDeclaration) node;
+            foreach (decl; multiDecl.declarations)
+            {
+                addSymbol(decl.id.value.get!string, decl.type, false);
+            }
+            break;
+
+        default:
+            // Não é uma declaração de variável
+            break;
+        }
+    }
+
+    Expression createInitializerExpression(Stmt node)
+    {
+        if (node is null)
+        {
+            return null;
+        }
+
+        switch (node.kind)
+        {
+        case NodeType.VariableDeclaration:
+            auto varDecl = cast(VariableDeclaration) node;
+            if (varDecl.value.type == typeid(Stmt))
+            {
+                auto stmt = varDecl.value.get!Stmt;
+                if (stmt !is null)
+                {
+                    return asExpression(generate(stmt));
+                }
+            }
+            return createDefaultValue(varDecl.type);
+
+        case NodeType.UninitializedVariableDeclaration:
+            auto uninitDecl = cast(UninitializedVariableDeclaration) node;
+            return createDefaultValue(uninitDecl.type);
+
+        case NodeType.MultipleVariableDeclaration:
+            throw new Exception(
+                "createInitializerExpression não deve ser chamado para declarações múltiplas");
+
+        default:
+            return asExpression(generate(node));
+        }
+    }
+
+    bool isValidForLoopInitialization(Stmt node)
+    {
+        return node.kind == NodeType.VariableDeclaration ||
+            node.kind == NodeType.MultipleVariableDeclaration ||
+            node.kind == NodeType.AssignmentDeclaration;
+    }
+
+    FTypeInfo getDeclarationType(Stmt node)
+    {
+        switch (node.kind)
+        {
+        case NodeType.VariableDeclaration:
+            return (cast(VariableDeclaration) node).type;
+
+        case NodeType.UninitializedVariableDeclaration:
+            auto uninitDecl = cast(UninitializedVariableDeclaration) node;
+            return uninitDecl.type;
+
+        case NodeType.MultipleVariableDeclaration:
+            auto multiDecl = cast(MultipleVariableDeclaration) node;
+            return multiDecl.commonType.baseType != TypesNative.NULL ?
+                multiDecl.commonType : multiDecl.declarations[0].type;
+
+        default:
+            throw new Exception("Tipo de nó não é uma declaração de variável");
+        }
     }
 
     void genBlock(GenerationResult result, ref Statement[] body)
@@ -556,7 +785,7 @@ private:
         case TypesNative.FLOAT:
             return new LiteralExpression(type, "0.0");
         case TypesNative.STRING:
-            return new LiteralExpression(type, `""`);
+            return new LiteralExpression(type, "");
         default:
             return new LiteralExpression(type, "null");
         }

@@ -17,3 +17,4 @@ tests/gramaticas
 performance
 bench
 bin/*
+bin_tests

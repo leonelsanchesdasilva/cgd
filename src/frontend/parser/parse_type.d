@@ -94,8 +94,11 @@ private:
         {
         case "int":
         case "inteiro":
+        case "número":
+        case "numero":
             return TypesNative.INT;
         case "float":
+        case "decimal":
             return TypesNative.FLOAT;
         case "string":
         case "texto":
@@ -106,6 +109,8 @@ private:
         case "nulo":
             return TypesNative.NULL;
         case "bool":
+        case "logica":
+        case "lógica":
             return TypesNative.BOOL;
         default:
             throw new Exception("Unknown native type: " ~ value);

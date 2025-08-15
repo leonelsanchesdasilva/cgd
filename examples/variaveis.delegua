@@ -1,0 +1,12 @@
+var nome, idade = "Fernando", 17
+
+var a, b = 1, 2
+
+var c, d: float = 1.5, 2.5
+
+var e, f: texto;
+
+e = "Qualquer Coisa"
+f = "Outra coisa util"
+
+escreva(nome, " ", idade, " ", a, " ", b, " ", c, " ", d, " ", e, " ", f, "\\n")
