@@ -121,6 +121,14 @@ class TestadorCGD
                 true,
                 false,
                 10
+            ),
+            CasoTeste(
+                "Multiplas declarações de variavel",
+                "examples/variaveis.delegua",
+                ["Fernando 17 1 2 1.5 2.5 Qualquer Coisa Outra coisa util"],
+                true,
+                false,
+                10
             )
         ];
     }

@@ -8,7 +8,7 @@ Compilador para a linguagem de programação [Delegua](https://github.com/Design
 
 **Site oficial:** [fernandothedev.github.io/cgd/](https://fernandothedev.github.io/cgd/)
 
-**Versão:** `0.0.1`
+**Versão:** `0.0.2`
 
 ## Plataformas suportadas
 

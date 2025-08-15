@@ -109,6 +109,18 @@ private:
         case NodeType.VariableDeclaration:
             analyzedNode = this.analyzeVarDeclaration(cast(VariableDeclaration) node);
             break;
+        case NodeType.UninitializedVariableDeclaration:
+            analyzedNode = this.analyzeUninitializedVarDeclaration(
+                cast(UninitializedVariableDeclaration) node);
+            break;
+        case NodeType.MultipleVariableDeclaration:
+            analyzedNode = this.analyzeMultipleVarDeclaration(
+                cast(MultipleVariableDeclaration) node);
+            break;
+        case NodeType.MultipleUninitializedVariableDeclaration:
+            analyzedNode = this.analyzeMultipleUninitializedVariableDeclaration(
+                cast(MultipleUninitializedVariableDeclaration) node);
+            break;
         case NodeType.BinaryExpr:
             analyzedNode = this.analyzeBinaryExpr(cast(BinaryExpr) node);
             break;
@@ -143,17 +155,230 @@ private:
         case NodeType.NullLiteral:
         case NodeType.BoolLiteral:
             analyzedNode = node;
-            // string baseType = to!string(analyzedNode.type.baseType).toLower();
             string baseType = this.typeChecker.getTypeStringFromNative(analyzedNode.type.baseType);
             analyzedNode.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
-            // analyzedNode.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
-            //     baseType);
             break;
 
         default:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    MultipleUninitializedVariableDeclaration analyzeMultipleUninitializedVariableDeclaration(
+        MultipleUninitializedVariableDeclaration node)
+    {
+        if (node.ids !is null && node.ids.length > 0)
+        {
+            if (node.commonType.baseType == TypesNative.NULL)
+            {
+                throw new Exception(
+                    "Tipo comum deve ser especificado para declarações múltiplas não inicializadas.");
+            }
+
+            string baseType = this.typeChecker.getTypeStringFromNative(node.commonType.baseType);
+            node.commonType.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+            node.type = node.commonType;
+
+            foreach (id; node.ids)
+            {
+                string idName = id.value.get!string;
+
+                if (idName in this.currentScope())
+                {
+                    throw new Exception(
+                        format("A variável '%s' já está definida no escopo em %d:%d",
+                            idName, cast(int) id.loc.line, cast(int) id.loc.start));
+                }
+
+                this.addSymbol(idName, SymbolInfo(idName, node.commonType, node.mut, true, id.loc));
+            }
+        }
+        else
+        {
+            throw new Exception(
+                "Declaração de variável não inicializada deve ter pelo menos um identificador.");
+        }
+
+        return node;
+    }
+
+    UninitializedVariableDeclaration analyzeUninitializedVarDeclaration(
+        UninitializedVariableDeclaration node)
+    {
+        if (node is null)
+        {
+            throw new Exception("Received null UninitializedVariableDeclaration node");
+        }
+
+        if (node.id !is null)
+        {
+            string id = node.id.value.get!string;
+
+            if (id in this.currentScope())
+            {
+                throw new Exception(
+                    format("A variável '%s' já está definida no escopo em %d:%d",
+                        id, cast(int) node.id.loc.line, cast(int) node.id.loc.start));
+            }
+
+            string baseType = this.typeChecker.getTypeStringFromNative(node.type.baseType);
+            node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+
+            this.addSymbol(id, SymbolInfo(id, node.type, node.mut, true, node.loc));
+        }
+        else
+        {
+            throw new Exception(
+                "Declaração de variável não inicializada deve ter pelo menos um identificador.");
+        }
+
+        return node;
+    }
+
+    MultipleVariableDeclaration analyzeMultipleVarDeclaration(MultipleVariableDeclaration node)
+    {
+        if (node.declarations.length == 0)
+        {
+            throw new Exception("Declaração múltipla deve conter pelo menos uma variável.");
+        }
+
+        VariablePair[] analyzedDeclarations;
+
+        foreach (i, decl; node.declarations)
+        {
+            string id = decl.id.value.get!string;
+
+            if (id in this.currentScope())
+            {
+                throw new Exception(
+                    format("A variável '%s' já está definida no escopo em %d:%d",
+                        id, cast(int) decl.id.loc.line, cast(int) decl.id.loc.start));
+            }
+
+            if (decl.value is null)
+            {
+                throw new Exception(format("Valor não pode ser nulo para a variável '%s'.", id));
+            }
+
+            Stmt analyzedValue = this.analyzeNode(decl.value);
+
+            FTypeInfo finalType;
+            if (node.commonType.baseType != TypesNative.NULL)
+            {
+                finalType = node.commonType;
+
+                string valueTypeStr = this.typeChecker.getTypeStringFromNative(
+                    analyzedValue.type.baseType);
+                string commonTypeStr = this.typeChecker.getTypeStringFromNative(
+                    node.commonType.baseType);
+
+                if (!this.typeChecker.areTypesCompatible(valueTypeStr, commonTypeStr))
+                {
+                    throw new Exception(
+                        format(
+                            "Tipo do valor '%s' não é compatível com o tipo declarado '%s' para a variável '%s'.",
+                            valueTypeStr, commonTypeStr, id));
+                }
+            }
+            else
+            {
+                finalType = analyzedValue.type;
+            }
+
+            string baseType = this.typeChecker.getTypeStringFromNative(finalType.baseType);
+            finalType.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+
+            VariablePair analyzedPair = VariablePair(decl.id, analyzedValue, finalType, decl.mut);
+            analyzedDeclarations ~= analyzedPair;
+
+            this.addSymbol(id, SymbolInfo(id, finalType, decl.mut, true, decl.id.loc));
+        }
+
+        node.declarations = analyzedDeclarations;
+
+        if (node.commonType.baseType != TypesNative.NULL)
+        {
+            string baseType = this.typeChecker.getTypeStringFromNative(node.commonType.baseType);
+            node.commonType.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+        }
+
+        return node;
+    }
+
+    bool hasInitialization(Stmt node)
+    {
+        switch (node.kind)
+        {
+        case NodeType.VariableDeclaration:
+            auto varDecl = cast(VariableDeclaration) node;
+            return varDecl.isInitialized();
+
+        case NodeType.UninitializedVariableDeclaration:
+            return false;
+
+        case NodeType.MultipleVariableDeclaration:
+            return true;
+
+        default:
+            return false;
+        }
+    }
+
+    Identifier[] getAllDeclaredIdentifiers(Stmt node)
+    {
+        Identifier[] ids;
+
+        switch (node.kind)
+        {
+        case NodeType.VariableDeclaration:
+            auto varDecl = cast(VariableDeclaration) node;
+            ids ~= varDecl.id;
+            break;
+
+        case NodeType.UninitializedVariableDeclaration:
+            auto uninitDecl = cast(UninitializedVariableDeclaration) node;
+            if (uninitDecl.id !is null)
+            {
+                ids ~= uninitDecl.id;
+            }
+            break;
+        case NodeType.MultipleUninitializedVariableDeclaration:
+            auto multiDecl = cast(MultipleUninitializedVariableDeclaration) node;
+            if (multiDecl.ids !is null)
+            {
+                ids ~= multiDecl.ids;
+            }
+            break;
+
+        case NodeType.MultipleVariableDeclaration:
+            auto multiDecl = cast(MultipleVariableDeclaration) node;
+            ids = multiDecl.getIdentifiers();
+            break;
+
+        default:
+            break;
+        }
+
+        return ids;
+    }
+
+    void validateForLoopInitialization(Stmt node)
+    {
+        if (node.kind != NodeType.VariableDeclaration &&
+            node.kind != NodeType.UninitializedVariableDeclaration &&
+            node.kind != NodeType.MultipleVariableDeclaration &&
+            node.kind != NodeType.AssignmentDeclaration)
+        {
+            throw new Exception(
+                "É esperado uma declaração ou redeclaração de variável no início do 'para'.");
+        }
+
+        if (node.kind == NodeType.UninitializedVariableDeclaration)
+        {
+            throw new Exception(
+                "Declarações não inicializadas não são permitidas na inicialização de loops 'para'.");
+        }
     }
 
     AssignmentDeclaration analyzeAssignmentDeclaration(AssignmentDeclaration node)

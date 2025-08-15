@@ -355,28 +355,150 @@ private:
 
     Stmt parseVarDeclaration()
     {
-        Token id = this.consume(TokenType.IDENTIFIER, "Esperava-se um ID para o nome da variavel.");
+        Token firstIdToken = this.consume(TokenType.IDENTIFIER, "Esperava-se um ID para o nome da variavel.");
+        Identifier[] ids = [
+            new Identifier(firstIdToken.value.get!string, firstIdToken.loc)
+        ];
+        bool isMultiple = false;
 
         if (this.match([TokenType.COMMA]))
         {
-            // TODO: Suporte a multiplas declarações
+            isMultiple = true;
+
+            while (this.peek().kind != TokenType.EQUALS &&
+                this.peek()
+                .kind != TokenType.COLON &&
+                this.peek()
+                .kind != TokenType.SEMICOLON &&
+                !this.isAtEnd())
+            {
+                Token idToken = this.consume(TokenType.IDENTIFIER, "Esperava-se um identificador após a ','.");
+                ids ~= new Identifier(idToken.value.get!string, idToken.loc);
+
+                if (!this.match([TokenType.COMMA]))
+                {
+                    break;
+                }
+            }
         }
 
+        FTypeInfo declaredType = createTypeInfo("null");
         if (this.match([TokenType.COLON]))
         {
-            // TODO: Suporte a tipagem
+            Token[] typeTokens;
+            while (this.peek().kind != TokenType.EQUALS &&
+                this.peek()
+                .kind != TokenType.SEMICOLON &&
+                !this.isAtEnd())
+            {
+                typeTokens ~= this.advance();
+            }
+
+            if (typeTokens.length > 0)
+            {
+                declaredType = new ParseType(typeTokens).parse();
+            }
         }
 
         if (this.match([TokenType.SEMICOLON]))
         {
-            // TODO: Suporte a variavel não inicializada
+            if (declaredType.baseType == TypesNative.NULL)
+            {
+                throw new Exception(
+                    "Tipo deve ser especificado para variáveis não inicializadas.");
+            }
+
+            if (isMultiple)
+            {
+                return VariableDeclarationFactory.createMultipleUninitialized(
+                    ids,
+                    declaredType,
+                    true,
+                    firstIdToken.loc
+                );
+            }
+            else
+            {
+                return VariableDeclarationFactory.createUninitialized(
+                    ids[0],
+                    declaredType,
+                    true,
+                    firstIdToken.loc
+                );
+            }
         }
 
         this.consume(TokenType.EQUALS, "Esperava-se '=' após a declaração da variavel.");
-        Stmt value = this.parseExpression(Precedence.LOWEST);
 
-        return new VariableDeclaration(new Identifier(id.value.get!string, id.loc), value, value.type, true, id
-                .loc);
+        if (isMultiple)
+        {
+            Stmt[] values;
+
+            do
+            {
+                values ~= this.parseExpression(Precedence.LOWEST);
+            }
+            while (this.match([TokenType.COMMA]));
+
+            if (ids.length != values.length)
+            {
+                throw new Exception(format(
+                        "Número de identificadores (%d) não corresponde ao número de valores (%d).",
+                        ids.length,
+                        values.length
+                ));
+            }
+
+            return VariableDeclarationFactory.createMultipleInitialized(
+                ids,
+                values,
+                declaredType,
+                true,
+                firstIdToken.loc
+            );
+        }
+        else
+        {
+            Stmt value = this.parseExpression(Precedence.LOWEST);
+            FTypeInfo finalType = declaredType.baseType != TypesNative.NULL ? declaredType
+                : value.type;
+
+            return VariableDeclarationFactory.createInitialized(
+                ids[0],
+                value,
+                finalType,
+                true,
+                firstIdToken.loc
+            );
+        }
+    }
+
+    bool isVariableDeclaration(Stmt stmt)
+    {
+        return stmt.kind == NodeType.VariableDeclaration ||
+            stmt.kind == NodeType.UninitializedVariableDeclaration ||
+            stmt.kind == NodeType.MultipleVariableDeclaration;
+    }
+
+    Identifier[] extractIdentifiers(Stmt stmt)
+    {
+        switch (stmt.kind)
+        {
+        case NodeType.VariableDeclaration:
+            auto varDecl = cast(VariableDeclaration) stmt;
+            return [varDecl.id];
+
+        case NodeType.UninitializedVariableDeclaration:
+            auto uninitDecl = cast(UninitializedVariableDeclaration) stmt;
+            return [uninitDecl.id];
+
+        case NodeType.MultipleVariableDeclaration:
+            auto multiDecl = cast(MultipleVariableDeclaration) stmt;
+            return multiDecl.getIdentifiers();
+
+        default:
+            return [];
+        }
     }
 
     Stmt parseCastExpression()
