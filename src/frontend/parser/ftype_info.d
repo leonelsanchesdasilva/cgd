@@ -1,6 +1,7 @@
 module frontend.parser.ftype_info;
 
 import frontend.values;
+import std.string : toLower;
 
 struct FTypeInfo
 {
@@ -12,10 +13,41 @@ struct FTypeInfo
     ulong pointerLevel;
 }
 
-FTypeInfo createTypeInfo(TypesNative baseType, bool s = false)
+TypesNative stringToTypesNative(string typeStr)
+{
+    switch (typeStr.toLower())
+    {
+    case "double":
+    case "float":
+        return TypesNative.FLOAT;
+    case "string":
+    case "texto":
+        return TypesNative.STRING;
+    case "bool":
+    case "logico":
+        return TypesNative.BOOL;
+    case "int":
+    case "long":
+    case "inteiro":
+        return TypesNative.INT;
+    case "char":
+    case "caracter":
+        return TypesNative.CHAR;
+    case "null":
+    case "nulo":
+        return TypesNative.NULL;
+    case "void":
+    case "id":
+        return TypesNative.VOID;
+    default:
+        throw new Exception("Tipo não suportado para conversão: " ~ typeStr);
+    }
+}
+
+FTypeInfo createTypeInfo(string baseType, bool s = false)
 {
     return FTypeInfo(
-        baseType,
+        stringToTypesNative(baseType),
         false,
         0,
         false,
@@ -24,10 +56,10 @@ FTypeInfo createTypeInfo(TypesNative baseType, bool s = false)
     );
 }
 
-FTypeInfo createTypeInfo(string baseType, bool s = false)
+FTypeInfo createTypeInfo(TypesNative baseType, bool s = false)
 {
     return FTypeInfo(
-        cast(TypesNative) baseType,
+        baseType,
         false,
         0,
         false,

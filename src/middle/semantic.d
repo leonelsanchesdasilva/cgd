@@ -143,9 +143,11 @@ private:
         case NodeType.NullLiteral:
         case NodeType.BoolLiteral:
             analyzedNode = node;
-            string baseType = to!string(analyzedNode.type.baseType).toLower();
-            analyzedNode.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
-                baseType);
+            // string baseType = to!string(analyzedNode.type.baseType).toLower();
+            string baseType = this.typeChecker.getTypeStringFromNative(analyzedNode.type.baseType);
+            analyzedNode.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+            // analyzedNode.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
+            //     baseType);
             break;
 
         default:
@@ -312,8 +314,10 @@ private:
             {
                 // Para std functions, params é string[]
                 expectedParamTypeStr = stdExpectedParams[i];
-                expectedParamType = cast(TypesNative) this.typeChecker.mapToDType(
-                    expectedParamTypeStr);
+                expectedParamType = stringToTypesNative(
+                    this.typeChecker.mapToDType(expectedParamTypeStr));
+                // expectedParamType = cast(TypesNative) this.typeChecker.mapToDType(
+                //     expectedParamTypeStr);
             }
             else
             {
@@ -421,10 +425,13 @@ private:
                 ));
             }
 
-            string baseType = to!string(arg.type.baseType).toLower();
+            // string baseType = to!string(arg.type.baseType).toLower();
             // writeln("FN BASE TYPE: ", baseType);
-            arg.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
-                baseType);
+            // writeln("C: ", baseType);
+            string baseType = this.typeChecker.getTypeStringFromNative(arg.type.baseType);
+            arg.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+            // arg.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
+            //     baseType);
             // writeln("ARG BASE TYPE: ", arg.type.baseType);
             this.addSymbol(_id, SymbolInfo(_id, arg.type, true, false, arg.id.loc));
             args ~= arg;
@@ -549,9 +556,8 @@ private:
         Stmt analyzedValue = this.analyzeNode(node.value.get!Stmt);
         node.value = analyzedValue;
 
-        string baseType = to!string(analyzedValue.type.baseType).toLower();
-        node.type.baseType = cast(TypesNative) this.typeChecker.mapToDType(
-            baseType);
+        string baseType = this.typeChecker.getTypeStringFromNative(analyzedValue.type.baseType);
+        node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
 
         return node;
