@@ -1,5 +1,5 @@
 var pesoInicial1, pesoInicial2, entrada1, entrada2, erro = 0.3, 0.4, 1, 1, 1
-var resultadoEsperado: número;
+var resultadoEsperado: inteiro;
 enquanto (erro != 0){
     se (entrada1 == 1) {
         se (entrada2 == 1) {
@@ -8,9 +8,8 @@ enquanto (erro != 0){
     } senão {
         resultadoEsperado = 0
     }
-    var somatoria = pesoInicial1 * entrada1
-    somatoria = pesoInicial2 * entrada2 + somatoria
-    var resultado: numero;
+    var somatoria = pesoInicial1 * entrada1 + pesoInicial2 * entrada2
+    var resultado: inteiro;
     se (somatoria < 1) {
         resultado = 0
     } senão {
@@ -22,7 +21,7 @@ enquanto (erro != 0){
     erro = resultadoEsperado - resultado
     escreva('p1: ', pesoInicial1, '\\n')
     escreva('p2: ', pesoInicial2, '\\n')
-    pesoInicial1 = 0.1 * entrada1 * erro + pesoInicial1
-    pesoInicial2 = 0.1 * entrada2 * erro + pesoInicial2
+    pesoInicial1 =  0.1 * entrada1 * erro + pesoInicial1
+    pesoInicial2 =  0.1 * entrada2 * erro + pesoInicial2
     escreva('erro: ', erro, '\\n')
 }

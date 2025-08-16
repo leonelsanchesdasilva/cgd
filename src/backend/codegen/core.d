@@ -156,7 +156,7 @@ class BinaryExpression : Expression
 
     override string generateD()
     {
-        return format!"(%s %s %s)"(left.generateD(), operator, right.generateD());
+        return format!"%s %s %s"(left.generateD(), operator, right.generateD());
     }
 }
 

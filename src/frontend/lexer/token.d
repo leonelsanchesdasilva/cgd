@@ -136,6 +136,8 @@ shared static this()
 {
     keywords["var"] = TokenType.VAR;
     keywords["false"] = TokenType.FALSE;
+    keywords["falso"] = TokenType.FALSE;
+    keywords["verdadeiro"] = TokenType.TRUE;
     keywords["true"] = TokenType.TRUE;
     keywords["bool"] = TokenType.BOOL;
     keywords["sustar"] = TokenType.SUSTAR;

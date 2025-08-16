@@ -1,0 +1,21 @@
+classe Delegua
+{
+    estatico privado {
+        VERSÃO: texto = "0.0.0"
+    }
+
+    construtor()
+    {
+        // nada
+    }
+
+    publico metodoPublico()
+    {
+        isto.VERSÃO = ...
+    }
+
+publico:
+    foo: T = bar
+protected:
+    bar: T = foo
+}

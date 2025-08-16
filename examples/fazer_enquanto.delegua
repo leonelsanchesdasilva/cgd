@@ -1,0 +1,7 @@
+var a: inteiro
+
+fazer {
+    a = a + 1 // a++
+} enquanto (a < 5)
+
+escreva(a)

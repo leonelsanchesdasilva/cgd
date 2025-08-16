@@ -146,7 +146,7 @@ private:
         command ~= stdlibFiles;
 
         // Opções de otimização (opcional)
-        command ~= "-O2";
+        command ~= "-O3";
 
         command ~= "-of=" ~ this.arquivoSaida;
 
