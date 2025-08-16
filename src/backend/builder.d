@@ -348,7 +348,7 @@ private:
             }
 
             auto var = new VariableDeclarationCore(
-                getType(decl.type),
+                expr.type,
                 varName,
                 expr
             );
@@ -632,6 +632,8 @@ private:
         return new VariableExpression(type, name);
     }
 
+    import std.math : abs;
+
     Expression genBinaryExpr(BinaryExpr node)
     {
         auto leftExpr = asExpression(generate(node.left));
@@ -642,12 +644,24 @@ private:
             if (leftExpr.type.kind == TypeKind.Float64 || rightExpr.type.kind == TypeKind.Float64)
             {
                 codegen.currentModule.addImport("std.math");
-                // if (node.right.value.get!double == 0.5)
-                // {
-                //     return new CallExpression(leftExpr.type, "sqrt", [
-                //             leftExpr
-                //         ]);
-                // }
+
+                if (auto floatLit = cast(FloatLiteral) node.right)
+                {
+                    if (auto floatVal = floatLit.value.peek!float)
+                    {
+                        if (abs(*floatVal - 0.5f) < 1e-6f)
+                        {
+                            auto doubleType = Type(TypeKind.Float64, "double");
+                            auto sqrtCall = new CallExpression(doubleType, "sqrt", [
+                                    new CastExpression(doubleType, leftExpr)
+                                ]);
+
+                            auto intType = Type(TypeKind.Int32, "int");
+                            return new CastExpression(intType, sqrtCall);
+                        }
+                    }
+                }
+
                 return new CallExpression(leftExpr.type, "pow", [
                         leftExpr, rightExpr
                     ]);
@@ -801,13 +815,12 @@ private:
     {
         auto varName = node.id.value.get!string;
 
-        // Adiciona variável ao escopo atual
         addSymbol(varName, node.type, false);
 
         Expression expr = createInitializerExpression(node);
 
         auto var = new VariableDeclarationCore(
-            getType(node.type),
+            expr.type,
             varName,
             expr
         );

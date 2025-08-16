@@ -1,7 +1,6 @@
 var n = 15
-para var i = 1; i <= n; i = i + 1
- {
-    var resultado: inteiro;
+para var i = 1; i <= n; i = i + 1 {
+    var resultado = ''
     se (i % 3 == 0) {
         resultado = resultado + 'Fizz'
     }
@@ -9,8 +8,8 @@ para var i = 1; i <= n; i = i + 1
         resultado = resultado + 'Buzz'
     }
     se (resultado == '') {
-        escreva(i, '\\n')
+        escrevaln(i)
     } senão {
-        escreva(resultado, '\\n')
+        escrevaln(resultado)
     }
 }

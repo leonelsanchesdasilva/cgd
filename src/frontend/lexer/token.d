@@ -140,6 +140,7 @@ shared static this()
     keywords["verdadeiro"] = TokenType.TRUE;
     keywords["true"] = TokenType.TRUE;
     keywords["bool"] = TokenType.BOOL;
+    keywords["logico"] = TokenType.BOOL;
     keywords["sustar"] = TokenType.SUSTAR;
     keywords["faca"] = TokenType.DO;
     keywords["faça"] = TokenType.DO;
@@ -197,7 +198,7 @@ bool isTypeToken(Token token)
         "bool": true,
         "void": true,
         "null": true,
-        "vazio": true, // Added Portuguese equivalent for void
+        "vazio": true, // void
     ];
 
     try

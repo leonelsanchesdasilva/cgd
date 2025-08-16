@@ -145,8 +145,13 @@ private:
         // Arquivos da stdlib
         command ~= stdlibFiles;
 
-        // Opções de otimização (opcional)
         command ~= "-O3";
+
+        command ~= "--flto=full";
+
+        command ~= "--mcpu=native";
+
+        command ~= "--release";
 
         command ~= "-of=" ~ this.arquivoSaida;
 

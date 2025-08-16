@@ -1,2 +1,2 @@
 var name = 'Fernando'
-escrevaln("Criado por: ", name)
+escrevaln('Criado por: ', name)

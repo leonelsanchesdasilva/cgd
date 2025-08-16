@@ -8,4 +8,4 @@ função sum(x: inteiro, y: inteiro): inteiro {
     retorna ret1(x) + ret2(y)
 }
 var resultado = sum(60, 9)
-escreva('Resultado: ', resultado, '\\n')
+escrevaln('Resultado: ', resultado)

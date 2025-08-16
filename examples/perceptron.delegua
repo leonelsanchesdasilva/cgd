@@ -17,11 +17,11 @@ enquanto (erro != 0){
             resultado = 1
         }
     }
-    escreva('resultado: ', resultado, '\\n')
+    escrevaln('resultado: ', resultado)
     erro = resultadoEsperado - resultado
-    escreva('p1: ', pesoInicial1, '\\n')
-    escreva('p2: ', pesoInicial2, '\\n')
+    escrevaln('p1: ', pesoInicial1)
+    escrevaln('p2: ', pesoInicial2)
     pesoInicial1 =  0.1 * entrada1 * erro + pesoInicial1
     pesoInicial2 =  0.1 * entrada2 * erro + pesoInicial2
-    escreva('erro: ', erro, '\\n')
+    escrevaln('erro: ', erro)
 }

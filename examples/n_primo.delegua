@@ -1,4 +1,4 @@
-função ehPrimo(n: inteiro): inteiro {
+função ehPrimo(n: inteiro): logica {
     se (n < 2) retorna falso
     se (n == 2) retorna verdadeiro
     se (n % 2 == 0) retorna falso
@@ -22,4 +22,4 @@ função contarPrimos(limite: inteiro): inteiro {
 
 var limite = 1000000
 var resultado = contarPrimos(limite)
-escreva("RESULT:", resultado, "\\n")
+escrevaln("RESULT:", resultado)
