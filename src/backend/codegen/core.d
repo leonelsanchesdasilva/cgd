@@ -582,7 +582,7 @@ class CodeGenerator
 
     static Type makeIntType()
     {
-        return Type(TypeKind.Int32);
+        return Type(TypeKind.Int64);
     }
 
     static Type makeBoolType()
@@ -922,66 +922,66 @@ class ForeachStatement : Statement
     }
 }
 
-class SwitchStatement : Statement
-{
-    Expression expression;
-    CaseStatement[] cases;
-    Statement defaultCase;
+// class SwitchStatementCore : Statement
+// {
+//     Expression expression;
+//     CaseStatement[] cases;
+//     Statement defaultCase;
 
-    struct CaseStatement
-    {
-        Expression[] values;
-        Statement[] statements;
-    }
+//     struct CaseStatement
+//     {
+//         Expression[] values;
+//         Statement[] statements;
+//     }
 
-    this(Expression expression)
-    {
-        this.expression = expression;
-    }
+//     this(Expression expression)
+//     {
+//         this.expression = expression;
+//     }
 
-    void addCase(Expression[] values, Statement[] statements)
-    {
-        cases ~= CaseStatement(values, statements);
-    }
+//     void addCase(Expression[] values, Statement[] statements)
+//     {
+//         cases ~= CaseStatement(values, statements);
+//     }
 
-    void setDefault(Statement defaultCase)
-    {
-        this.defaultCase = defaultCase;
-    }
+//     void setDefault(Statement defaultCase)
+//     {
+//         this.defaultCase = defaultCase;
+//     }
 
-    override string generateD(int indentLevel = 0)
-    {
-        auto result = appender!string();
-        result.put(indent(indentLevel) ~ "switch (" ~ expression.generateD() ~ ") {\n");
+//     override string generateD(int indentLevel = 0)
+//     {
+//         auto result = appender!string();
+//         result.put(indent(indentLevel) ~ "switch (" ~ expression.generateD() ~ ") {\n");
 
-        foreach (case_; cases)
-        {
-            foreach (value; case_.values)
-            {
-                result.put(indent(indentLevel + 1) ~ "case " ~ value.generateD() ~ ":\n");
-            }
+//         foreach (case_; cases)
+//         {
+//             foreach (value; case_.values)
+//             {
+//                 result.put(indent(indentLevel + 1) ~ "case " ~ value.generateD() ~ ":\n");
+//             }
 
-            foreach (stmt; case_.statements)
-            {
-                result.put(stmt.generateD(indentLevel + 2) ~ "\n");
-            }
+//             foreach (stmt; case_.statements)
+//             {
+//                 result.put(stmt.generateD(indentLevel + 2) ~ "\n");
+//             }
 
-            if (case_.statements.length > 0)
-            {
-                result.put(indent(indentLevel + 2) ~ "break;\n");
-            }
-        }
+//             if (case_.statements.length > 0)
+//             {
+//                 result.put(indent(indentLevel + 2) ~ "break;\n");
+//             }
+//         }
 
-        if (defaultCase)
-        {
-            result.put(indent(indentLevel + 1) ~ "default:\n");
-            result.put(defaultCase.generateD(indentLevel + 2) ~ "\n");
-        }
+//         if (defaultCase)
+//         {
+//             result.put(indent(indentLevel + 1) ~ "default:\n");
+//             result.put(defaultCase.generateD(indentLevel + 2) ~ "\n");
+//         }
 
-        result.put(indent(indentLevel) ~ "}");
-        return result.data;
-    }
-}
+//         result.put(indent(indentLevel) ~ "}");
+//         return result.data;
+//     }
+// }
 
 class ExtendedModule : Module
 {
@@ -1124,5 +1124,241 @@ class AddressOfExpressionCore : Expression
     override string generateD()
     {
         return format!"&%s"(operand.generateD());
+    }
+}
+
+class BreakStatementCore : Statement
+{
+    this()
+    {
+        // Break simples
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        return indent(indentLevel) ~ "break;";
+    }
+}
+
+// Statement para continue (útil para loops)
+class ContinueStatementCore : Statement
+{
+    this()
+    {
+        // Continue simples
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        return indent(indentLevel) ~ "continue;";
+    }
+}
+
+// Switch statement aprimorado
+class SwitchStatementCore : Statement
+{
+    Expression expression;
+    CaseStatementCore[] cases;
+    Statement[] defaultCase;
+
+    this(Expression expression)
+    {
+        this.expression = expression;
+    }
+
+    void addCase(Expression[] values, Statement[] statements)
+    {
+        cases ~= new CaseStatementCore(values, statements);
+    }
+
+    void setDefault(Statement[] defaultCase)
+    {
+        this.defaultCase = defaultCase;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        auto result = appender!string();
+        result.put(indent(indentLevel) ~ "switch (" ~ expression.generateD() ~ ") {\n");
+
+        foreach (case_; cases)
+        {
+            result.put(case_.generateD(indentLevel + 1));
+        }
+
+        if (defaultCase)
+        {
+            result.put(indent(indentLevel + 1) ~ "default:\n");
+            foreach (case_; defaultCase)
+            {
+                result.put(case_.generateD(indentLevel + 2) ~ "\n");
+            }
+        }
+
+        result.put(indent(indentLevel) ~ "}");
+        return result.data;
+    }
+}
+
+// Case statement individual
+class CaseStatementCore : Statement
+{
+    Expression[] values;
+    Statement[] statements;
+
+    this(Expression[] values, Statement[] statements)
+    {
+        this.values = values;
+        this.statements = statements;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        auto result = appender!string();
+
+        // Gera os labels de caso
+        foreach (value; values)
+        {
+            result.put(indent(indentLevel) ~ "case " ~ value.generateD() ~ ":\n");
+        }
+
+        // Gera o corpo do caso
+        foreach (stmt; statements)
+        {
+            result.put(stmt.generateD(indentLevel + 1) ~ "\n");
+        }
+
+        return result.data;
+    }
+}
+
+// Expressão para chamadas de método em objetos
+class MethodCallExpression : Expression
+{
+    Expression object;
+    string methodName;
+    Expression[] arguments;
+
+    this(Type type, Expression object, string methodName, Expression[] arguments)
+    {
+        super(type);
+        this.object = object;
+        this.methodName = methodName;
+        this.arguments = arguments;
+    }
+
+    override string generateD()
+    {
+        string[] args;
+        foreach (arg; arguments)
+        {
+            args ~= arg.generateD();
+        }
+        return format!"%s.%s(%s)"(object.generateD(), methodName, args.join(", "));
+    }
+}
+
+// Expressão ternária (condição ? valor1 : valor2)
+class TernaryExpression : Expression
+{
+    Expression condition;
+    Expression trueValue;
+    Expression falseValue;
+
+    this(Type type, Expression condition, Expression trueValue, Expression falseValue)
+    {
+        super(type);
+        this.condition = condition;
+        this.trueValue = trueValue;
+        this.falseValue = falseValue;
+    }
+
+    override string generateD()
+    {
+        return format!"(%s ? %s : %s)"(
+            condition.generateD(),
+            trueValue.generateD(),
+            falseValue.generateD()
+        );
+    }
+}
+
+// Expressão para new (criação de objetos)
+class NewExpression : Expression
+{
+    Expression[] arguments;
+
+    this(Type type, Expression[] arguments = [])
+    {
+        super(type);
+        this.arguments = arguments;
+    }
+
+    override string generateD()
+    {
+        if (arguments.length > 0)
+        {
+            string[] args;
+            foreach (arg; arguments)
+            {
+                args ~= arg.generateD();
+            }
+            return format!"new %s(%s)"(type.toString(), args.join(", "));
+        }
+        return format!"new %s()"(type.toString());
+    }
+}
+
+// Statement para try-catch (para futuras extensões)
+class TryStatementCore : Statement
+{
+    Statement tryBlock;
+    CatchClause[] catchClauses;
+    Statement finallyBlock;
+
+    struct CatchClause
+    {
+        Type exceptionType;
+        string variableName;
+        Statement handler;
+    }
+
+    this(Statement tryBlock)
+    {
+        this.tryBlock = tryBlock;
+    }
+
+    void addCatch(Type exceptionType, string variableName, Statement handler)
+    {
+        catchClauses ~= CatchClause(exceptionType, variableName, handler);
+    }
+
+    void setFinally(Statement finallyBlock)
+    {
+        this.finallyBlock = finallyBlock;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        auto result = appender!string();
+
+        result.put(indent(indentLevel) ~ "try\n");
+        result.put(tryBlock.generateD(indentLevel) ~ "\n");
+
+        foreach (catch_; catchClauses)
+        {
+            result.put(indent(indentLevel) ~ "catch (");
+            result.put(catch_.exceptionType.toString() ~ " " ~ catch_.variableName);
+            result.put(")\n");
+            result.put(catch_.handler.generateD(indentLevel) ~ "\n");
+        }
+
+        if (finallyBlock)
+        {
+            result.put(indent(indentLevel) ~ "finally\n");
+            result.put(finallyBlock.generateD(indentLevel));
+        }
+
+        return result.data;
     }
 }

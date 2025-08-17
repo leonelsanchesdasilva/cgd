@@ -40,7 +40,7 @@ class TypeChecker
 
     private void initializeTypeMap()
     {
-        typeMap["int"] = "int";
+        typeMap["int"] = "long";
         typeMap["long"] = "long";
         typeMap["float"] = "double";
         typeMap["double"] = "double";
@@ -77,7 +77,7 @@ class TypeChecker
             return "double";
         case TypesNative.STRING:
             return "string";
-        case TypesNative.INT:
+        case TypesNative.LONG:
             return "long";
         case TypesNative.CHAR:
             return "char";

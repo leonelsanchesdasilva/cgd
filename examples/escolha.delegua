@@ -1,10 +1,10 @@
-var nome: texto = leia() ?? ""
+var nome: texto = leia("Nome: ")
 
 escolha (nome) {
     caso "":
         escrevaln("Você não definiu um nome!")
-        quebrar;
+        quebrar
     padrao:
-        escrevaln("Olá ", name, "!")
-        quebrar;
+        escrevaln("Olá ", nome, "!")
+        quebrar
 }

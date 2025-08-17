@@ -36,6 +36,7 @@ enum TokenType
     EM, // em
     COMO, // como
     DE, // de
+    QUEBRAR, // quebrar (para switch)
 
     // Future Reserved Words
     CLASSE, // classe
@@ -145,6 +146,7 @@ shared static this()
     keywords["faca"] = TokenType.DO;
     keywords["faça"] = TokenType.DO;
     keywords["caso"] = TokenType.CASO;
+    keywords["quebrar"] = TokenType.QUEBRAR;
     keywords["senao"] = TokenType.SENAO;
     keywords["senão"] = TokenType.SENAO;
     keywords["continue"] = TokenType.CONTINUE;

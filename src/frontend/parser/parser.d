@@ -41,7 +41,7 @@ private:
         {
             // Literals
         case TokenType.INT:
-            return new IntLiteral(to!int(token.value.get!string), token.loc);
+            return new IntLiteral(to!long(token.value.get!string), token.loc);
         case TokenType.FLOAT:
             return new FloatLiteral(to!float(token.value.get!string), token.loc);
         case TokenType.STRING:
@@ -77,6 +77,10 @@ private:
             return this.parseForStatement();
         case TokenType.ENQUANTO:
             return this.parseWhileStatement();
+        case TokenType.ESCOLHA:
+            return this.parseSwitchStatement();
+        case TokenType.QUEBRAR:
+            return this.parseBreakStatement();
 
             // Others
         case TokenType.IDENTIFIER:
@@ -85,12 +89,133 @@ private:
                 return this.parseCallExpression();
             if (this.peek().kind == TokenType.EQUALS)
                 return this.parseAssignmentDeclaration();
-            return new Identifier(token.value.get!string, token.loc);
+
+            auto identifier = new Identifier(token.value.get!string, token.loc);
+
+            if (this.peek().kind == TokenType.DOT)
+            {
+                return this.parseMemberCallExpression(identifier);
+            }
+
+            return identifier;
 
         default:
-            token.print();
             throw new Exception("Noo prefix parse function for " ~ to!string(token));
         }
+    }
+
+    Stmt parseSwitchStatement()
+    {
+        Loc start = this.previous().loc;
+
+        // this.consume(TokenType.LPAREN, "Esperava-se '(' após 'escolha'.");
+        Stmt condition = this.parseExpression(Precedence.LOWEST);
+        // this.consume(TokenType.RPAREN, "Esperava-se ')' após a condição do 'escolha'.");
+        this.consume(TokenType.LBRACE, "Esperava-se '{' após a condição do 'escolha'.");
+
+        CaseStatement[] cases;
+        DefaultStatement defaultCase = null;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            if (this.match([TokenType.CASO]))
+            {
+                cases ~= this.parseCaseStatement();
+            }
+            else if (this.match([TokenType.PADRAO]))
+            {
+                if (defaultCase !is null)
+                {
+                    throw new Exception("Apenas um caso 'padrão' é permitido por 'escolha'.");
+                }
+                defaultCase = this.parseDefaultStatement();
+            }
+            else
+            {
+                throw new Exception("Esperava-se 'caso' ou 'padrão' dentro de 'escolha'.");
+            }
+        }
+
+        Loc end = this.consume(TokenType.RBRACE, "Esperava-se '}' após o corpo do 'escolha'.").loc;
+
+        return new SwitchStatement(condition, cases, defaultCase, this.makeLoc(start, end));
+    }
+
+    CaseStatement parseCaseStatement()
+    {
+        Loc start = this.previous().loc;
+
+        Stmt value = this.parseExpression(Precedence.LOWEST);
+        this.consume(TokenType.COLON, "Esperava-se ':' após o valor do 'caso'.");
+
+        Stmt[] body;
+        while (!this.check(TokenType.CASO) && !this.check(TokenType.PADRAO) &&
+            !this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        return new CaseStatement(value, body, start);
+    }
+
+    DefaultStatement parseDefaultStatement()
+    {
+        Loc start = this.previous().loc;
+
+        this.consume(TokenType.COLON, "Esperava-se ':' após 'padrão'.");
+
+        Stmt[] body;
+        while (!this.check(TokenType.CASO) && !this.check(TokenType.PADRAO) &&
+            !this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        return new DefaultStatement(body, start);
+    }
+
+    Stmt parseBreakStatement()
+    {
+        Loc start = this.previous().loc;
+        return new BreakStatement(start);
+    }
+
+    Stmt parseMemberCallExpression(Stmt object)
+    {
+        while (this.check(TokenType.DOT))
+        {
+            this.advance();
+
+            Token memberToken = this.consume(TokenType.IDENTIFIER,
+                "Esperava-se um identificador após '.'.");
+            Identifier member = new Identifier(memberToken.value.get!string, memberToken.loc);
+
+            Stmt[] args = [];
+            bool isMethodCall = false;
+
+            // Verifica se é uma chamada de método (tem parênteses)
+            if (this.check(TokenType.LPAREN))
+            {
+                this.advance();
+                isMethodCall = true;
+
+                if (!this.check(TokenType.RPAREN))
+                {
+                    do
+                    {
+                        args ~= this.parseExpression(Precedence.LOWEST);
+                    }
+                    while (this.match([TokenType.COMMA]));
+                }
+
+                this.consume(TokenType.RPAREN, "Esperava-se ')' após os argumentos do método.");
+            }
+
+            Loc loc = this.makeLoc(object.loc, this.previous().loc);
+            object = new MemberCallExpr(object, member, args, isMethodCall, loc);
+        }
+
+        return object;
     }
 
     Stmt parseAssignmentDeclaration()
@@ -688,6 +813,9 @@ private:
         case TokenType.OR:
             leftOld = this.parseBinaryInfix(leftOld);
             return;
+        case TokenType.DOT: // suporte para member call
+            leftOld = this.parseMemberCallExpression(leftOld);
+            return;
         default:
             return;
         }
@@ -699,15 +827,11 @@ private:
 
         while (!this.isAtEnd() && precedence < this.peekPrecedence())
         {
-            // writeln("Token: ", this.peek(), " Precedence: ", precedence, " Precedence peek: ", this.peekPrecedence(),
-            //     " Left: ", left, " Left value: ", left.value);
-
             ulong oldPos = this.pos;
             this.infix(left);
 
             if (this.pos == oldPos)
             {
-                // writeln("AVISO: Token não processado pela infix(): ", this.peek());
                 break;
             }
         }
@@ -850,6 +974,7 @@ private:
         case TokenType.EXPONENTIATION:
             return Precedence.EXPONENT;
         case TokenType.LPAREN:
+        case TokenType.DOT:
             return Precedence.CALL;
         default:
             return Precedence.LOWEST;
@@ -872,7 +997,7 @@ private:
         {
             return createTypeInfo(TypesNative.FLOAT);
         }
-        return createTypeInfo(TypesNative.INT);
+        return createTypeInfo(TypesNative.LONG);
     }
 
     Loc makeLoc(ref Loc start, ref Loc end)

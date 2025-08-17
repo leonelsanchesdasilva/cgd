@@ -108,8 +108,8 @@ class TestadorCGD
             ),
             CasoTeste(
                 "Fibonacci",
-                "examples/fibo.delegua",
-                ["resultado: 102334155"],
+                "examples/fibo_otimizado.delegua",
+                ["resultado: 12586269025"],
                 true,
                 true,
                 30

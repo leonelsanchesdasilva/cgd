@@ -160,6 +160,21 @@ private:
         case NodeType.UnaryExpr:
             analyzedNode = analyzeUnaryExpr(cast(UnaryExpr) node);
             break;
+        case NodeType.MemberCallExpr:
+            analyzedNode = this.analyzeMemberCallExpr(cast(MemberCallExpr) node);
+            break;
+        case NodeType.SwitchStatement:
+            analyzedNode = this.analyzeSwitchStatement(cast(SwitchStatement) node);
+            break;
+        case NodeType.CaseStatement:
+            analyzedNode = this.analyzeCaseStatement(cast(CaseStatement) node);
+            break;
+        case NodeType.DefaultStatement:
+            analyzedNode = this.analyzeDefaultStatement(cast(DefaultStatement) node);
+            break;
+        case NodeType.BreakStatement:
+            analyzedNode = this.analyzeBreakStatement(cast(BreakStatement) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -177,9 +192,88 @@ private:
         return analyzedNode;
     }
 
+    MemberCallExpr analyzeMemberCallExpr(MemberCallExpr node)
+    {
+        // Analisa o objeto à esquerda do ponto
+        node.object = this.analyzeNode(node.object);
+
+        // Analisa o membro (já deve ser um Identifier)
+        // node.member = cast(Identifier) this.analyzeNode(node.member);
+
+        // Se for uma chamada de método, analisa os argumentos
+        if (node.isMethodCall && node.args.length > 0)
+        {
+            Stmt[] analyzedArgs;
+            foreach (arg; node.args)
+            {
+                analyzedArgs ~= this.analyzeNode(arg);
+            }
+            node.args = analyzedArgs;
+        }
+
+        // Por enquanto, definimos o tipo como o tipo do objeto
+        // Em uma implementação mais completa, isso seria determinado
+        // baseado no tipo do objeto e no membro acessado
+        node.type = node.object.type;
+
+        return node;
+    }
+
+    SwitchStatement analyzeSwitchStatement(SwitchStatement node)
+    {
+        node.condition = this.analyzeNode(node.condition);
+
+        CaseStatement[] analyzedCases;
+        foreach (case_; node.cases)
+        {
+            analyzedCases ~= this.analyzeCaseStatement(case_);
+        }
+        node.cases = analyzedCases;
+
+        if (node.defaultCase !is null)
+        {
+            node.defaultCase = this.analyzeDefaultStatement(node.defaultCase);
+        }
+
+        return node;
+    }
+
+    CaseStatement analyzeCaseStatement(CaseStatement node)
+    {
+        if (node.value !is null)
+        {
+            node.value = this.analyzeNode(node.value);
+        }
+
+        Stmt[] analyzedBody;
+        foreach (stmt; node.body)
+        {
+            analyzedBody ~= this.analyzeNode(stmt);
+        }
+        node.body = analyzedBody;
+
+        return node;
+    }
+
+    DefaultStatement analyzeDefaultStatement(DefaultStatement node)
+    {
+        Stmt[] analyzedBody;
+        foreach (stmt; node.body)
+        {
+            analyzedBody ~= this.analyzeNode(stmt);
+        }
+        node.body = analyzedBody;
+
+        return node;
+    }
+
+    BreakStatement analyzeBreakStatement(BreakStatement node)
+    {
+        return node;
+    }
+
     UnaryExpr analyzeUnaryExpr(UnaryExpr node)
     {
-        // node.operand = this.analyzeNode(node.operand);
         node.type = node.operand.type;
         return node;
     }
@@ -580,10 +674,10 @@ private:
                 // Converte o valor para string baseado no tipo original
                 switch (argType.baseType)
                 {
-                case TypesNative.INT:
+                case TypesNative.LONG:
                     if (analyzedArg.value.hasValue())
                     {
-                        analyzedArg.value = to!string(analyzedArg.value.get!int);
+                        analyzedArg.value = to!string(analyzedArg.value.get!long);
                     }
                     break;
                 case TypesNative.FLOAT:
