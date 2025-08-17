@@ -151,6 +151,8 @@ class TypeChecker
 
     public FTypeInfo checkBinaryExprTypes(Stmt left, Stmt right, string operator)
     {
+        // import std.stdio;
+
         string leftType = left.type.baseType;
         string rightType = right.type.baseType;
 
@@ -265,8 +267,98 @@ class TypeChecker
                 "Operator '" ~ operator ~ "' cannot be applied to types '" ~
                     leftType ~ "' and '" ~ rightType ~ "'"
             );
+        case "&":
+        case "|":
+        case "^":
+            if (isNumericType(leftType) && isNumericType(rightType))
+            {
+                return promoteTypes(leftType, rightType);
+            }
+            throw new Exception(
+                "Operator '" ~ operator ~ "' can only be applied to integer types, got '" ~
+                    leftType ~ "' and '" ~ rightType ~ "'"
+            );
+
+        case "<<":
+        case ">>":
+            if (isNumericType(leftType) && isNumericType(rightType))
+            {
+                return createTypeInfo(leftType);
+            }
+            throw new Exception(
+                "Shift operators can only be applied to integer types, got '" ~
+                    leftType ~ "' and '" ~ rightType ~ "'"
+            );
+
+        case "&=":
+        case "|=":
+        case "^=":
+            if (isNumericType(leftType) && isNumericType(rightType))
+            {
+                return createTypeInfo(leftType);
+            }
+            throw new Exception(
+                "Operator '" ~ operator ~ "' can only be applied to integer types, got '" ~
+                    leftType ~ "' and '" ~ rightType ~ "'"
+            );
+        case "<<=":
+        case ">>=":
+            if (isNumericType(leftType) && isNumericType(rightType))
+            {
+                return createTypeInfo(leftType);
+            }
+            throw new Exception(
+                "Shift assignment operators can only be applied to integer types, got '" ~
+                    leftType ~ "' and '" ~ rightType ~ "'"
+            );
         default:
             throw new Exception("Unknown operator: " ~ operator);
+        }
+    }
+
+    public FTypeInfo checkUnaryExprType(Stmt operand, string operator, bool isPostfix = false)
+    {
+        string operandType = this.getTypeStringFromNative(operand.type.baseType);
+
+        switch (operator)
+        {
+        case "++":
+        case "--":
+            if (!isNumericType(operandType))
+            {
+                throw new Exception(
+                    "Operator '" ~ operator ~ "' can only be applied to numeric types, got '" ~
+                        operandType ~ "'"
+                );
+            }
+            return operand.type;
+
+        case "+":
+        case "-":
+            if (!isNumericType(operandType))
+            {
+                throw new Exception(
+                    "Unary operator '" ~ operator ~ "' can only be applied to numeric types, got '" ~
+                        operandType ~ "'"
+                );
+            }
+            return operand.type;
+
+        case "!":
+            return createTypeInfo(TypesNative.BOOL);
+
+        case "~":
+            if (!isNumericType(operandType) || operandType == "float" || operandType == "double")
+            {
+                throw new Exception(
+                    "Bitwise NOT operator '~' can only be applied to integer types, got '" ~
+                        operandType ~ "'"
+                );
+            }
+            return operand.type;
+
+        default:
+            throw new Exception("Unknown unary operator: " ~ operator);
         }
     }
 

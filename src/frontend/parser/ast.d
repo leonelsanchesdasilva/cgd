@@ -392,11 +392,13 @@ class UnaryExpr : Stmt
 {
     string op; // "-", "!", "&", "*"
     Stmt operand;
+    bool postFix;
 
-    this(string op, Stmt operand, Loc loc)
+    this(string op, Stmt operand, Loc loc, bool postFix = false)
     {
         this.kind = NodeType.UnaryExpr;
         this.op = op;
+        this.postFix = postFix;
         this.operand = operand;
         this.value = null;
         this.type = createTypeInfo(TypesNative.NULL);

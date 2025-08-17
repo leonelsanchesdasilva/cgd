@@ -112,7 +112,22 @@ class LiteralExpression : Expression
     this(Type type, string value)
     {
         super(type);
-        this.value = value;
+        string processedValue = value;
+
+        if (type.kind == TypeKind.Int64 || type.kind == TypeKind.Int32)
+        {
+            string temp = "";
+            for (long i = 0; i < value.length; i++)
+            {
+                temp ~= value[i];
+                long remainingChars = value.length - i - 1;
+                if (remainingChars > 0 && remainingChars % 3 == 0)
+                    temp ~= "_";
+            }
+            processedValue = temp;
+        }
+
+        this.value = processedValue;
     }
 
     override string generateD()
@@ -156,7 +171,7 @@ class BinaryExpression : Expression
 
     override string generateD()
     {
-        return format!"%s %s %s"(left.generateD(), operator, right.generateD());
+        return format!"(%s %s %s)"(left.generateD(), operator, right.generateD());
     }
 }
 

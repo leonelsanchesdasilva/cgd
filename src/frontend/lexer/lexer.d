@@ -50,13 +50,15 @@ private:
         m["}"] = TokenType.RBRACE;
         m["."] = TokenType.DOT;
         m["%"] = TokenType.MODULO;
-        m["|"] = TokenType.PIPE;
         m["="] = TokenType.EQUALS;
         m["["] = TokenType.LBRACKET;
         m["]"] = TokenType.RBRACKET;
         m["!"] = TokenType.BANG;
-        m["&"] = TokenType.AMPERSAND;
         m["?"] = TokenType.QUESTION;
+        m["&"] = TokenType.BIT_AND;
+        m["|"] = TokenType.BIT_OR;
+        m["^"] = TokenType.BIT_XOR;
+        m["~"] = TokenType.BIT_NOT;
         return m;
     }
 
@@ -74,6 +76,13 @@ private:
         m["||"] = TokenType.OR;
         m["!="] = TokenType.NOT_EQUALS;
         m[".."] = TokenType.RANGE;
+        m["<<"] = TokenType.LEFT_SHIFT;
+        m[">>"] = TokenType.RIGHT_SHIFT;
+        m["&="] = TokenType.BIT_AND_ASSIGN;
+        m["|="] = TokenType.BIT_OR_ASSIGN;
+        m["^="] = TokenType.BIT_XOR_ASSIGN;
+        m["<<="] = TokenType.LEFT_SHIFT_ASSIGN;
+        m[">>="] = TokenType.RIGHT_SHIFT_ASSIGN;
         return m;
     }
 
@@ -124,16 +133,11 @@ private:
 
         if (hexDigits.length == 0)
         {
-            // this.reportError(
-            //     this.getLocation(startPos, this.offset),
-            //     "Invalid hexadecimal number: missing digits after '0x'",
-            //     "Add hexadecimal digits (0-9, a-f, A-F) after '0x'.",
-            // );
             throw new Exception("Invalid hexadecimal number: missing digits after '0x'");
         }
 
         auto fullHex = "0x" ~ hexDigits;
-        int value = to!int(hexDigits);
+        long value = to!long(hexDigits, 16);
 
         this.createTokenWithLocation(
             TokenType.INT,
@@ -150,16 +154,11 @@ private:
 
         if (octalDigits.length == 0)
         {
-            // this.reportError(
-            //     this.getLocation(startPos, this.offset),
-            //     "Invalid octal number: missing digits after '0o'",
-            //     "Add octal digits (0-7) after '0o'.",
-            // );
             throw new Exception("Invalid octal number: missing digits after '0o'");
         }
 
         auto fullOctal = "0o" ~ octalDigits;
-        int value = to!int(octalDigits);
+        long value = to!long(octalDigits, 8);
 
         this.createTokenWithLocation(
             TokenType.INT,
@@ -176,16 +175,11 @@ private:
 
         if (binaryDigits.length == 0)
         {
-            // this.reportError(
-            //     this.getLocation(startPos, this.offset),
-            //     "Invalid binary number: missing digits after '0b'",
-            //     "Add binary digits (0-1) after '0b'.",
-            // );
             throw new Exception("Invalid binary number: missing digits after '0b'");
         }
 
         auto fullBinary = "0b" ~ binaryDigits;
-        int value = to!int(binaryDigits);
+        long value = to!long(binaryDigits, 2);
 
         this.createTokenWithLocation(
             TokenType.INT,
@@ -322,7 +316,7 @@ private:
 
         string identifier = this.source[startOffset .. this.offset];
         TokenType tokenType = TokenType.IDENTIFIER;
-        if (auto keywordType = identifier in keywords) // Verificação segura
+        if (auto keywordType = identifier in keywords)
         {
             tokenType = *keywordType;
         }
@@ -472,20 +466,20 @@ private:
             )
         {
             this.offset++;
-            string binaryValue = number ~ "b";
+            long binaryValue = to!long(number, 2);
 
             this.createTokenWithLocation(
                 TokenType.INT,
                 Variant(binaryValue),
                 startPos,
-                binaryValue.length,
+                number.length + 1
             );
             return;
         }
 
         this.createTokenWithLocation(
             TokenType.INT,
-            Variant(number),
+            Variant(to!long(number)),
             startPos,
             number.length,
         );

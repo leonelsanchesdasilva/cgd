@@ -14,17 +14,22 @@ import frontend.parser.parse_type;
 enum Precedence
 {
     LOWEST = 1,
-    ASSIGN = 2, // =
-    TERNARY = 3, // ? :
-    OR = 4, // ||
-    AND = 5, // &&
-    EQUALS = 6, // == !=
-    COMPARISON = 7, // < > <= >=
-    SUM = 8, // + -
-    PRODUCT = 9, // * / %
-    EXPONENT = 10, // **
-    PREFIX = 11, // -x !x
-    CALL = 12, // myFunction(x)
+    ASSIGN = 2,
+    TERNARY = 3,
+    OR = 4,
+    AND = 5,
+    BIT_OR = 6,
+    BIT_XOR = 7,
+    BIT_AND = 8,
+    EQUALS = 9,
+    COMPARISON = 10,
+    BIT_SHIFT = 11,
+    SUM = 12,
+    PRODUCT = 13,
+    EXPONENT = 14,
+    PREFIX = 15,
+    POSTFIX = 16, // Nova precedência para operadores postfix
+    CALL = 17, // Ajustado para ser maior que POSTFIX
 }
 
 class Parser
@@ -41,7 +46,7 @@ private:
         {
             // Literals
         case TokenType.INT:
-            return new IntLiteral(to!long(token.value.get!string), token.loc);
+            return new IntLiteral(token.value.get!long, token.loc);
         case TokenType.FLOAT:
             return new FloatLiteral(to!float(token.value.get!string), token.loc);
         case TokenType.STRING:
@@ -98,6 +103,25 @@ private:
             }
 
             return identifier;
+
+        case TokenType.BIT_NOT:
+            Stmt operand = this.parseExpression(Precedence.PREFIX);
+            return new UnaryExpr("~", operand, this.makeLoc(token.loc, operand.loc));
+        case TokenType.INCREMENT:
+            if (this.peek().kind != TokenType.IDENTIFIER)
+            {
+                throw new Exception("Operador '++' prefix requer um identificador válido.");
+            }
+            Stmt operand = this.parseExpression(Precedence.POSTFIX);
+            return new UnaryExpr("++", operand, this.makeLoc(token.loc, operand.loc), false);
+
+        case TokenType.DECREMENT:
+            if (this.peek().kind != TokenType.IDENTIFIER)
+            {
+                throw new Exception("Operador '--' prefix requer um identificador válido.");
+            }
+            Stmt operand = this.parseExpression(Precedence.POSTFIX);
+            return new UnaryExpr("--", operand, this.makeLoc(token.loc, operand.loc), false);
 
         default:
             throw new Exception("Noo prefix parse function for " ~ to!string(token));
@@ -689,8 +713,6 @@ private:
             this.peek().kind == TokenType.FLOAT ||
             this.peek().kind == TokenType.STRING ||
             this.peek()
-            .kind == TokenType.AMPERSAND ||
-            this.peek()
             .kind == TokenType.ASTERISK ||
             this.peek().kind == TokenType.LPAREN;
 
@@ -811,7 +833,27 @@ private:
         case TokenType.LESS_THAN_OR_EQUALS:
         case TokenType.AND:
         case TokenType.OR:
+        case TokenType.BIT_AND:
+        case TokenType.BIT_OR:
+        case TokenType.BIT_XOR:
+        case TokenType.LEFT_SHIFT:
+        case TokenType.RIGHT_SHIFT:
+        case TokenType.BIT_AND_ASSIGN:
+        case TokenType.BIT_OR_ASSIGN:
+        case TokenType.BIT_XOR_ASSIGN:
+        case TokenType.LEFT_SHIFT_ASSIGN:
+        case TokenType.RIGHT_SHIFT_ASSIGN:
             leftOld = this.parseBinaryInfix(leftOld);
+            return;
+        case TokenType.INCREMENT:
+        case TokenType.DECREMENT:
+            Token operatorToken = this.advance();
+            leftOld = new UnaryExpr(
+                operatorToken.value.get!string,
+                leftOld,
+                this.makeLoc(leftOld.loc, operatorToken.loc),
+                true
+            );
             return;
         case TokenType.DOT: // suporte para member call
             leftOld = this.parseMemberCallExpression(leftOld);
@@ -976,6 +1018,25 @@ private:
         case TokenType.LPAREN:
         case TokenType.DOT:
             return Precedence.CALL;
+
+        case TokenType.BIT_OR:
+            return Precedence.BIT_OR;
+        case TokenType.BIT_XOR:
+            return Precedence.BIT_XOR;
+        case TokenType.BIT_AND:
+            return Precedence.BIT_AND;
+        case TokenType.LEFT_SHIFT:
+        case TokenType.RIGHT_SHIFT:
+            return Precedence.BIT_SHIFT;
+        case TokenType.BIT_AND_ASSIGN:
+        case TokenType.BIT_OR_ASSIGN:
+        case TokenType.BIT_XOR_ASSIGN:
+        case TokenType.LEFT_SHIFT_ASSIGN:
+        case TokenType.RIGHT_SHIFT_ASSIGN:
+            return Precedence.ASSIGN;
+        case TokenType.INCREMENT:
+        case TokenType.DECREMENT:
+            return Precedence.POSTFIX;
         default:
             return Precedence.LOWEST;
         }

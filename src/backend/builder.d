@@ -614,7 +614,9 @@ private:
     {
         Statement _init = generate(node._init).get!Statement;
         Expression cond = generate(node.cond).get!Expression;
-        Statement incr = generate(node.expr).get!Statement;
+        auto temp_incr = generate(node.expr);
+        Statement incr = temp_incr.type == typeid(Expression) ? new ExpressionStatement(
+            temp_incr.get!Expression) : temp_incr.get!Statement;
 
         Statement[] body = [];
         foreach (Stmt stmt; node.body)
@@ -741,25 +743,44 @@ private:
             {
                 codegen.currentModule.addImport("std.math");
 
+                // Verificar se o expoente é 0.5 (raiz quadrada)
                 if (auto floatLit = cast(FloatLiteral) node.right)
                 {
                     if (auto floatVal = floatLit.value.peek!float)
                     {
                         if (abs(*floatVal - 0.5f) < 1e-6f)
                         {
+                            // Retornar sqrt diretamente com o tipo correto
                             auto doubleType = Type(TypeKind.Float64, "double");
-                            auto sqrtCall = new CallExpression(doubleType, "sqrt", [
+                            return new CallExpression(doubleType, "sqrt", [
                                     new CastExpression(doubleType, leftExpr)
                                 ]);
-
-                            auto intType = Type(TypeKind.Int32, "int");
-                            return new CastExpression(intType, sqrtCall);
                         }
                     }
                 }
 
-                return new CallExpression(leftExpr.type, "pow", [
-                        leftExpr, rightExpr
+                // Verificar também se é um IntLiteral com valor 0 (para casos como x ** 0)
+                if (auto intLit = cast(IntLiteral) node.right)
+                {
+                    if (auto intVal = intLit.value.peek!long)
+                    {
+                        if (*intVal == 0)
+                        {
+                            // x ** 0 = 1
+                            return new LiteralExpression(leftExpr.type, "1");
+                        }
+                        else if (*intVal == 1)
+                        {
+                            // x ** 1 = x
+                            return leftExpr;
+                        }
+                    }
+                }
+
+                auto doubleType = Type(TypeKind.Float64, "double");
+                return new CallExpression(doubleType, "pow", [
+                        new CastExpression(doubleType, leftExpr),
+                        new CastExpression(doubleType, rightExpr)
                     ]);
             }
             else

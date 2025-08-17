@@ -75,7 +75,6 @@ enum TokenType
     LESS_THAN_OR_EQUALS, // <= 
     AND, // &&
     OR, // ||
-    PIPE, // | // var x: <T> | <T> = <EXPR>
     COMMA, // ,
     COLON, // :
     SEMICOLON, // ;
@@ -88,9 +87,23 @@ enum TokenType
     RBRACKET, // ] 
     NOT, // ] 
     RANGE, // ..
-    AMPERSAND, // &
     BANG, // ! 
     QUESTION, // ? 
+
+    // Operadores bitwise básicos
+    BIT_AND, // & 
+    BIT_OR, // |
+    BIT_XOR, // ^
+    BIT_NOT, // ~
+    LEFT_SHIFT, // <<
+    RIGHT_SHIFT, // >>
+
+    // Operadores bitwise compostos (assignment)
+    BIT_AND_ASSIGN, // &=
+    BIT_OR_ASSIGN, // |=
+    BIT_XOR_ASSIGN, // ^=
+    LEFT_SHIFT_ASSIGN, // <<=
+    RIGHT_SHIFT_ASSIGN, // >>=
 
     EOF, // EndOfFile
 }
@@ -125,7 +138,7 @@ struct Token
         import std.format : format;
 
         writeln(format("Token Kind: %s", this.kind));
-        writeln(format("Token value: %s", this.value.get!string));
+        writeln(format("Token value: %s", this.value));
         writeln(format("Token loc: %s", this.loc.line));
         writeln("---------------------------------------------\n");
     }
@@ -221,7 +234,6 @@ bool isComplexTypeToken(Token token)
     case TokenType.ASTERISK:
     case TokenType.LBRACKET:
     case TokenType.RBRACKET:
-    case TokenType.AMPERSAND:
         return true;
     default:
         return false;
