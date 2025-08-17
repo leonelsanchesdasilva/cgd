@@ -23,8 +23,7 @@
 				"-O",
 				"-release",
 				"-inline",
-				"-boundscheck=off",
-				"-noboundscheck"
+				"-boundscheck=off"
 			],
 			"dflags-ldc": [
 				"-O3",

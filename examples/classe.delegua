@@ -1,21 +1,32 @@
-classe Delegua
-{
-    estatico privado {
-        VERSÃO: texto = "0.0.0"
-    }
+// classe Delegua
+// {
+//     estatico privado {
+//         VERSÃO: texto = "0.0.0"
+//     }
 
-    construtor()
+//     construtor()
+//     {
+//         // nada
+//     }
+
+//     publico metodoPublico()
+//     {
+//         isto.VERSÃO = ...
+//     }
+
+// publico:
+//     foo: T = bar
+// protected:
+//     bar: T = foo
+// }
+
+classe Usuario {
+    privado nome: texto;
+
+    construtor(nome: texto = "")
     {
-        // nada
+        isto.nome = nome
     }
-
-    publico metodoPublico()
-    {
-        isto.VERSÃO = ...
-    }
-
-publico:
-    foo: T = bar
-protected:
-    bar: T = foo
 }
+
+var usuario = novo Usuario("Fernando")
