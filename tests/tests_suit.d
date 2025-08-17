@@ -108,11 +108,11 @@ class TestadorCGD
             ),
             CasoTeste(
                 "Fibonacci",
-                "examples/fibo.delegua",
-                ["resultado: 102334155"],
+                "examples/fibo_otimizado.delegua",
+                ["resultado: 3736710778780434371"],
                 true,
                 true,
-                30
+                10
             ),
             CasoTeste(
                 "Perceptron",
@@ -129,6 +129,57 @@ class TestadorCGD
                 true,
                 false,
                 10
+            ),
+            CasoTeste(
+                "Operações bitwise",
+                "examples/bitwise.delegua",
+                [
+                    "Permissões após adicionar leitura+escrita: 6",
+                    "Tem permissão de leitura!",
+                    "Permissões após remover escrita: 4",
+                    "Permissões após alternar execução: 5", "69 * 2 = 138",
+                    "69 * 4 = 276", "69 * 8 = 552", "69 / 2 = 34", "69 / 4 = 17",
+                    "69 / 8 = 8"
+                ],
+                true,
+                false,
+                10
+            ),
+            CasoTeste(
+                "Numeros representados em binario, hexadecimal e octal",
+                "examples/inteiros.delegua",
+                [
+                    "Binario:     69",
+                    "Hexadecimal: 69",
+                    "Octal:       69"
+                ],
+                true,
+                false,
+                10
+            ),
+            CasoTeste(
+                "Calculo de numeros primos",
+                "examples/n_primo.delegua",
+                [
+                    "RESULT:78498"
+                ],
+                true,
+                true,
+                5
+            ),
+            CasoTeste(
+                "Calculo de bhaskara",
+                "examples/bhaskara.delegua",
+                [
+                    "O valor de Delta é: 11",
+                    "O valor de X1 é: 6",
+                    "O valor de X2 é: -5",
+                    "Substituindo X1 na equação obtém-se: 0",
+                    "Substituindo X2 na equação obtém-se: 0"
+                ],
+                true,
+                false,
+                5
             )
         ];
     }

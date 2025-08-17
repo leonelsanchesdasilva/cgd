@@ -27,6 +27,10 @@ enum NodeType
     ElseStatement,
     ForStatement,
     WhileStatement,
+    SwitchStatement,
+    CaseStatement,
+    DefaultStatement,
+    BreakStatement,
 
     IntLiteral,
     FloatLiteral,
@@ -40,6 +44,7 @@ enum NodeType
     CallExpr,
     CastExpr,
     BinaryExpr,
+    MemberCallExpr
 }
 
 class Stmt
@@ -79,10 +84,10 @@ class BinaryExpr : Stmt
 
 class IntLiteral : Stmt
 {
-    this(int value, Loc loc)
+    this(long value, Loc loc)
     {
         this.kind = NodeType.IntLiteral;
-        this.type = createTypeInfo(TypesNative.INT);
+        this.type = createTypeInfo(TypesNative.LONG);
         this.value = value;
         this.loc = loc;
     }
@@ -387,11 +392,13 @@ class UnaryExpr : Stmt
 {
     string op; // "-", "!", "&", "*"
     Stmt operand;
+    bool postFix;
 
-    this(string op, Stmt operand, Loc loc)
+    this(string op, Stmt operand, Loc loc, bool postFix = false)
     {
         this.kind = NodeType.UnaryExpr;
         this.op = op;
+        this.postFix = postFix;
         this.operand = operand;
         this.value = null;
         this.type = createTypeInfo(TypesNative.NULL);
@@ -530,5 +537,83 @@ class AssignmentDeclaration : Stmt
         this.value = value;
         this.type = type;
         this.loc = loc;
+    }
+}
+
+class MemberCallExpr : Stmt
+{
+    Stmt object; // A expressão à esquerda do ponto
+    Identifier member; // O membro sendo chamado
+    Stmt[] args; // Argumentos se for uma chamada de método
+    bool isMethodCall; // true se for x.method(), false se for x.property
+
+    this(Stmt object, Identifier member, Stmt[] args, bool isMethodCall, Loc loc)
+    {
+        this.kind = NodeType.MemberCallExpr;
+        this.object = object;
+        this.member = member;
+        this.args = args;
+        this.isMethodCall = isMethodCall;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL);
+        this.value = null;
+    }
+}
+
+class SwitchStatement : Stmt
+{
+    Stmt condition;
+    CaseStatement[] cases;
+    DefaultStatement defaultCase;
+
+    this(Stmt condition, CaseStatement[] cases, DefaultStatement defaultCase, Loc loc)
+    {
+        this.kind = NodeType.SwitchStatement;
+        this.condition = condition;
+        this.cases = cases;
+        this.defaultCase = defaultCase;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+        this.value = null;
+    }
+}
+
+class CaseStatement : Stmt
+{
+    Stmt value; // Valor do caso
+    Stmt[] body; // Corpo do caso
+
+    this(Stmt value, Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.CaseStatement;
+        this.value = value;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+    }
+}
+
+class DefaultStatement : Stmt
+{
+    Stmt[] body; // Corpo do caso padrão
+
+    this(Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.DefaultStatement;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+        this.value = null;
+    }
+}
+
+class BreakStatement : Stmt
+{
+    this(Loc loc)
+    {
+        this.kind = NodeType.BreakStatement;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+        this.value = null;
     }
 }

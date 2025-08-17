@@ -236,6 +236,8 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 	}
 	catch (Exception e)
 	{
+		writefln("cgd: erro durante o processamento: %s", e.file);
+		writefln("cgd: erro durante o processamento: %d", e.line);
 		writefln("cgd: erro durante o processamento: %s", e.msg);
 		if (verboso)
 		{

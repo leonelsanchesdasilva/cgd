@@ -12,9 +12,9 @@ função ehPrimo(n: inteiro): logica {
 
 função contarPrimos(limite: inteiro): inteiro {
     var contador = 0
-    para var numero = 2; numero <= limite; numero = numero + 1 {
+    para var numero = 2; numero <= limite; numero++ {
         se (ehPrimo(numero)) {
-            contador = contador + 1
+            contador++
         }
     }
     retorna contador

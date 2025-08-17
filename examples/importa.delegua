@@ -1,5 +1,0 @@
-importa "es"
-importa { escreva } de "es"
-
-importa "es" como x
-x.escreva()

@@ -3,7 +3,8 @@ module frontend.values;
 enum TypesNative : string
 {
     STRING = "string",
-    INT = "int",
+    INT = "long",
+    LONG = "long",
     FLOAT = "float",
     BOOL = "bool",
     VOID = "void",

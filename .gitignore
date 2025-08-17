@@ -13,8 +13,7 @@ cgd-test-*
 *.o
 *.obj
 *.lst
-tests/gramaticas
 performance
 bench
 bin/*
-bin_tests
+bin_tests/*

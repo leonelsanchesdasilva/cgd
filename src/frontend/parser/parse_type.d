@@ -96,7 +96,7 @@ private:
         case "inteiro":
         case "número":
         case "numero":
-            return TypesNative.INT;
+            return TypesNative.LONG;
         case "float":
         case "decimal":
             return TypesNative.FLOAT;

@@ -160,6 +160,21 @@ private:
         case NodeType.UnaryExpr:
             analyzedNode = analyzeUnaryExpr(cast(UnaryExpr) node);
             break;
+        case NodeType.MemberCallExpr:
+            analyzedNode = this.analyzeMemberCallExpr(cast(MemberCallExpr) node);
+            break;
+        case NodeType.SwitchStatement:
+            analyzedNode = this.analyzeSwitchStatement(cast(SwitchStatement) node);
+            break;
+        case NodeType.CaseStatement:
+            analyzedNode = this.analyzeCaseStatement(cast(CaseStatement) node);
+            break;
+        case NodeType.DefaultStatement:
+            analyzedNode = this.analyzeDefaultStatement(cast(DefaultStatement) node);
+            break;
+        case NodeType.BreakStatement:
+            analyzedNode = this.analyzeBreakStatement(cast(BreakStatement) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -177,10 +192,107 @@ private:
         return analyzedNode;
     }
 
+    MemberCallExpr analyzeMemberCallExpr(MemberCallExpr node)
+    {
+        // Analisa o objeto à esquerda do ponto
+        node.object = this.analyzeNode(node.object);
+
+        // Analisa o membro (já deve ser um Identifier)
+        // node.member = cast(Identifier) this.analyzeNode(node.member);
+
+        // Se for uma chamada de método, analisa os argumentos
+        if (node.isMethodCall && node.args.length > 0)
+        {
+            Stmt[] analyzedArgs;
+            foreach (arg; node.args)
+            {
+                analyzedArgs ~= this.analyzeNode(arg);
+            }
+            node.args = analyzedArgs;
+        }
+
+        // Por enquanto, definimos o tipo como o tipo do objeto
+        // Em uma implementação mais completa, isso seria determinado
+        // baseado no tipo do objeto e no membro acessado
+        node.type = node.object.type;
+
+        return node;
+    }
+
+    SwitchStatement analyzeSwitchStatement(SwitchStatement node)
+    {
+        node.condition = this.analyzeNode(node.condition);
+
+        CaseStatement[] analyzedCases;
+        foreach (case_; node.cases)
+        {
+            analyzedCases ~= this.analyzeCaseStatement(case_);
+        }
+        node.cases = analyzedCases;
+
+        if (node.defaultCase !is null)
+        {
+            node.defaultCase = this.analyzeDefaultStatement(node.defaultCase);
+        }
+
+        return node;
+    }
+
+    CaseStatement analyzeCaseStatement(CaseStatement node)
+    {
+        if (node.value !is null)
+        {
+            node.value = this.analyzeNode(node.value);
+        }
+
+        Stmt[] analyzedBody;
+        foreach (stmt; node.body)
+        {
+            analyzedBody ~= this.analyzeNode(stmt);
+        }
+        node.body = analyzedBody;
+
+        return node;
+    }
+
+    DefaultStatement analyzeDefaultStatement(DefaultStatement node)
+    {
+        Stmt[] analyzedBody;
+        foreach (stmt; node.body)
+        {
+            analyzedBody ~= this.analyzeNode(stmt);
+        }
+        node.body = analyzedBody;
+
+        return node;
+    }
+
+    BreakStatement analyzeBreakStatement(BreakStatement node)
+    {
+        return node;
+    }
+
     UnaryExpr analyzeUnaryExpr(UnaryExpr node)
     {
-        // node.operand = this.analyzeNode(node.operand);
-        node.type = node.operand.type;
+        node.operand = this.analyzeNode(node.operand);
+
+        if (node.op == "++" || node.op == "--")
+        {
+            writeln(node.operand);
+            if (node.operand.kind != NodeType.Identifier)
+            {
+                throw new Exception("Operadores '++' e '--' só podem ser aplicados a variáveis.");
+            }
+
+            // Usar o novo método do TypeChecker
+            node.type = this.typeChecker.checkUnaryExprType(node.operand, node.op, node.postFix);
+        }
+        else
+        {
+            // Para outros operadores unários
+            node.type = this.typeChecker.checkUnaryExprType(node.operand, node.op, false);
+        }
+
         return node;
     }
 
@@ -516,32 +628,26 @@ private:
             ));
         }
 
-        // Define o tipo de retorno da chamada
         node.type = returnType;
 
-        // Marca a função como usada
         if (!(funcName in this.identifiersUsed))
         {
             this.identifiersUsed[funcName] = true;
         }
 
-        // Analisa e valida cada argumento
         Stmt[] analyzedArgs;
         analyzedArgs.reserve(node.args.length);
 
         for (size_t i = 0; i < node.args.length; i++)
         {
-            // Analisa o argumento
             Stmt analyzedArg = this.analyzeNode(node.args[i]);
 
-            // Se é função variadic e não temos mais parâmetros definidos, aceita qualquer tipo
             if (i >= expectedArgCount && isVariadic)
             {
                 analyzedArgs ~= analyzedArg;
                 continue;
             }
 
-            // Verifica se temos parâmetro definido para este argumento
             if (i >= expectedArgCount)
             {
                 throw new Exception(format(
@@ -550,7 +656,6 @@ private:
                 ));
             }
 
-            // Obtém o tipo esperado baseado no tipo de função
             TypesNative expectedParamType;
             string expectedParamTypeStr;
 
@@ -572,18 +677,16 @@ private:
 
             FTypeInfo argType = analyzedArg.type;
 
-            // Conversão especial: qualquer tipo para string
             if (argType.baseType != TypesNative.STRING && expectedParamType == TypesNative.STRING)
             {
                 analyzedArg.type.baseType = TypesNative.STRING;
 
-                // Converte o valor para string baseado no tipo original
                 switch (argType.baseType)
                 {
-                case TypesNative.INT:
+                case TypesNative.LONG:
                     if (analyzedArg.value.hasValue())
                     {
-                        analyzedArg.value = to!string(analyzedArg.value.get!int);
+                        analyzedArg.value = to!string(analyzedArg.value.get!long);
                     }
                     break;
                 case TypesNative.FLOAT:
@@ -606,7 +709,6 @@ private:
                 continue;
             }
 
-            // Verifica compatibilidade de tipos
             string argTypeStr = to!string(argType.baseType).toLower();
             string paramTypeStr = expectedParamTypeStr.toLower();
 
@@ -618,26 +720,19 @@ private:
                 ));
             }
 
-            // Se os tipos são compatíveis mas diferentes, faz a conversão
             if (this.typeChecker.areTypesCompatible(argTypeStr, paramTypeStr) &&
                 argType.baseType != expectedParamType)
             {
                 analyzedArg.type.baseType = expectedParamType;
-
-                // Aqui você poderia adicionar conversão de valores se necessário
-                // analyzedArg.llvmType = this.typeChecker.mapToLLVMType(paramTypeStr);
             }
 
             analyzedArgs ~= analyzedArg;
         }
 
-        // Atualiza os argumentos analisados
         node.args = analyzedArgs;
 
         return node;
     }
-
-    // Também adicione este case ao switch em analyzeNode():
 
     ReturnStatement analyzeReturnStatement(ReturnStatement node)
     {
@@ -763,6 +858,20 @@ private:
     {
         Stmt left = this.analyzeNode(node.left);
         Stmt right = this.analyzeNode(node.right);
+
+        // Operações bitwise mantêm o tipo mais abrangente
+        if (node.op == "&" || node.op == "|" || node.op == "^" ||
+            node.op == "<<" || node.op == ">>")
+        {
+            if (left.type.baseType != TypesNative.LONG)
+            {
+                left.type.baseType = TypesNative.LONG;
+            }
+            if (right.type.baseType != TypesNative.LONG)
+            {
+                right.type.baseType = TypesNative.LONG;
+            }
+        }
 
         if (node.op == "+" && (left.type.baseType == TypesNative.STRING || right.type.baseType == TypesNative
                 .STRING))

@@ -51,7 +51,7 @@ private:
         case TypesNative.STRING:
             result = this.codegen.makeStringType();
             break;
-        case TypesNative.INT:
+        case TypesNative.LONG:
             result = this.codegen.makeIntType();
             break;
         case TypesNative.VOID:
@@ -160,6 +160,16 @@ private:
             return GenerationResult(genForStatement(cast(ForStatement) node));
         case NodeType.AssignmentDeclaration:
             return GenerationResult(genAssignmentDeclaration(cast(AssignmentDeclaration) node));
+        case NodeType.MemberCallExpr:
+            return GenerationResult(genMemberCallExpr(cast(MemberCallExpr) node));
+        case NodeType.SwitchStatement:
+            return GenerationResult(genSwitchStatement(cast(SwitchStatement) node));
+        case NodeType.CaseStatement:
+            return GenerationResult(genCaseStatement(cast(CaseStatement) node));
+        case NodeType.DefaultStatement:
+            return GenerationResult(genDefaultStatement(cast(DefaultStatement) node));
+        case NodeType.BreakStatement:
+            return GenerationResult(genBreakStatement(cast(BreakStatement) node));
 
         case NodeType.StringLiteral:
             return GenerationResult(genStringLiteral(cast(StringLiteral) node));
@@ -259,6 +269,92 @@ private:
 
         popScope();
         return null;
+    }
+
+    Expression genMemberCallExpr(MemberCallExpr node)
+    {
+        Expression objectExpr = asExpression(generate(node.object));
+        string memberName = node.member.value.get!string;
+
+        if (node.isMethodCall)
+        {
+            // É uma chamada de método
+            Expression[] args;
+            args ~= objectExpr;
+            foreach (arg; node.args)
+            {
+                args ~= asExpression(generate(arg));
+            }
+
+            // Cria uma expressão de chamada de método usando MemberAccessExpression + CallExpression
+            auto memberAccess = new MemberAccessExpression(getType(node.type), objectExpr, memberName);
+            return new CallExpression(getType(node.type), memberName, args);
+        }
+        else
+        {
+            // É acesso a propriedade/campo
+            return new MemberAccessExpression(getType(node.type), objectExpr, memberName);
+        }
+    }
+
+    Statement genSwitchStatement(SwitchStatement node)
+    {
+        Expression condition = asExpression(generate(node.condition));
+        auto switchStmt = new SwitchStatementCore(condition);
+
+        foreach (case_; node.cases)
+        {
+            Expression[] caseValues = [asExpression(generate(case_.value))];
+            Statement[] caseBody;
+
+            foreach (stmt; case_.body)
+            {
+                auto result = generate(stmt);
+                genBlock(result, caseBody);
+            }
+
+            switchStmt.addCase(caseValues, caseBody);
+        }
+
+        if (node.defaultCase !is null)
+        {
+            Statement[] defaultBody;
+            foreach (stmt; node.defaultCase.body)
+            {
+                auto result = generate(stmt);
+                genBlock(result, defaultBody);
+            }
+            switchStmt.setDefault(defaultBody);
+        }
+
+        return switchStmt;
+    }
+
+    Statement genCaseStatement(CaseStatement node)
+    {
+        Statement[] body;
+        foreach (stmt; node.body)
+        {
+            auto result = generate(stmt);
+            genBlock(result, body);
+        }
+        return new BlockStatement(body);
+    }
+
+    Statement genDefaultStatement(DefaultStatement node)
+    {
+        Statement[] body;
+        foreach (stmt; node.body)
+        {
+            auto result = generate(stmt);
+            genBlock(result, body);
+        }
+        return new BlockStatement(body);
+    }
+
+    Statement genBreakStatement(BreakStatement node)
+    {
+        return new BreakStatementCore();
     }
 
     Statement genMultipleUninitializedVariableDeclaration(
@@ -518,7 +614,9 @@ private:
     {
         Statement _init = generate(node._init).get!Statement;
         Expression cond = generate(node.cond).get!Expression;
-        Statement incr = generate(node.expr).get!Statement;
+        auto temp_incr = generate(node.expr);
+        Statement incr = temp_incr.type == typeid(Expression) ? new ExpressionStatement(
+            temp_incr.get!Expression) : temp_incr.get!Statement;
 
         Statement[] body = [];
         foreach (Stmt stmt; node.body)
@@ -597,7 +695,7 @@ private:
 
     Expression genIntLiteral(IntLiteral node)
     {
-        auto value = node.value.get!int;
+        auto value = node.value.get!long;
         return new LiteralExpression(getType(node.type), to!string(value));
     }
 
@@ -645,25 +743,44 @@ private:
             {
                 codegen.currentModule.addImport("std.math");
 
+                // Verificar se o expoente é 0.5 (raiz quadrada)
                 if (auto floatLit = cast(FloatLiteral) node.right)
                 {
                     if (auto floatVal = floatLit.value.peek!float)
                     {
                         if (abs(*floatVal - 0.5f) < 1e-6f)
                         {
+                            // Retornar sqrt diretamente com o tipo correto
                             auto doubleType = Type(TypeKind.Float64, "double");
-                            auto sqrtCall = new CallExpression(doubleType, "sqrt", [
+                            return new CallExpression(doubleType, "sqrt", [
                                     new CastExpression(doubleType, leftExpr)
                                 ]);
-
-                            auto intType = Type(TypeKind.Int32, "int");
-                            return new CastExpression(intType, sqrtCall);
                         }
                     }
                 }
 
-                return new CallExpression(leftExpr.type, "pow", [
-                        leftExpr, rightExpr
+                // Verificar também se é um IntLiteral com valor 0 (para casos como x ** 0)
+                if (auto intLit = cast(IntLiteral) node.right)
+                {
+                    if (auto intVal = intLit.value.peek!long)
+                    {
+                        if (*intVal == 0)
+                        {
+                            // x ** 0 = 1
+                            return new LiteralExpression(leftExpr.type, "1");
+                        }
+                        else if (*intVal == 1)
+                        {
+                            // x ** 1 = x
+                            return leftExpr;
+                        }
+                    }
+                }
+
+                auto doubleType = Type(TypeKind.Float64, "double");
+                return new CallExpression(doubleType, "pow", [
+                        new CastExpression(doubleType, leftExpr),
+                        new CastExpression(doubleType, rightExpr)
                     ]);
             }
             else
@@ -848,7 +965,7 @@ private:
 
         switch (typeInfo.baseType)
         {
-        case TypesNative.INT:
+        case TypesNative.LONG:
             return new LiteralExpression(type, "0");
         case TypesNative.BOOL:
             return new LiteralExpression(type, "false");

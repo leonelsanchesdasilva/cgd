@@ -29,7 +29,7 @@ TypesNative stringToTypesNative(string typeStr)
     case "int":
     case "long":
     case "inteiro":
-        return TypesNative.INT;
+        return TypesNative.LONG;
     case "char":
     case "caracter":
         return TypesNative.CHAR;
