@@ -37,21 +37,30 @@ public:
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
             .customTargetType("void")
-            .libraryName("io")
+            .libraryName("io_escreva")
             .generateDExternComplete();
 
         auto fn2 = new FunctionBuilder("escrevaln", mod)
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
             .customTargetType("void")
-            .libraryName("io")
+            .libraryName("io_escrevaln")
+            .generateDExternComplete();
+
+        auto fn3 = new FunctionBuilder("leia", mod)
+            .returns(createTypeInfo(TypesNative.STRING))
+            .withParams(["string"])
+            .customTargetType("string")
+            .libraryName("io_leia")
             .generateDExternComplete();
 
         auto escreva = fn1.done();
         auto escrevaln = fn2.done();
+        auto leia = fn3.done();
 
         availableStdFunctions["escreva"] = escreva.getFunction("escreva");
         availableStdFunctions["escrevaln"] = escrevaln.getFunction("escrevaln");
+        availableStdFunctions["leia"] = leia.getFunction("leia");
     }
 
     Program semantic(Program program)
@@ -148,6 +157,9 @@ private:
         case NodeType.AssignmentDeclaration:
             analyzedNode = this.analyzeAssignmentDeclaration(cast(AssignmentDeclaration) node);
             break;
+        case NodeType.UnaryExpr:
+            analyzedNode = analyzeUnaryExpr(cast(UnaryExpr) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -163,6 +175,13 @@ private:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    UnaryExpr analyzeUnaryExpr(UnaryExpr node)
+    {
+        // node.operand = this.analyzeNode(node.operand);
+        node.type = node.operand.type;
+        return node;
     }
 
     MultipleUninitializedVariableDeclaration analyzeMultipleUninitializedVariableDeclaration(

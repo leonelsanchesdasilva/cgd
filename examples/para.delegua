@@ -1,0 +1,11 @@
+var a = 0
+para var i = 0; i < 5; i = i + 1
+ {
+    a = a + 1
+}
+se (a == 5) {
+    escrevaln('Para: OK!')
+} senão {
+    escrevaln('a: ', a)
+    escrevaln('Para: ERRO!')
+}

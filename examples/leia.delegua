@@ -1,0 +1,2 @@
+var name = leia("Nome: ")
+escrevaln("Bem vindo " + name)

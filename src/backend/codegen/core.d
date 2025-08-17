@@ -156,7 +156,7 @@ class BinaryExpression : Expression
 
     override string generateD()
     {
-        return format!"(%s %s %s)"(left.generateD(), operator, right.generateD());
+        return format!"%s %s %s"(left.generateD(), operator, right.generateD());
     }
 }
 
@@ -479,7 +479,7 @@ class Function
 class Module
 {
     string name;
-    string[] imports;
+    bool[string] imports;
     Function[] functions;
     string[] stdFunctions;
     Statement[] globalStatements;
@@ -491,7 +491,8 @@ class Module
 
     void addImport(string importName)
     {
-        imports ~= importName;
+        if (importName !in imports)
+            imports[importName] = true;
     }
 
     void addFunction(Function func)
@@ -520,7 +521,7 @@ class Module
         }
 
         // Imports
-        foreach (imp; imports)
+        foreach (imp, value; imports)
         {
             result.put("import " ~ imp ~ ";\n");
         }

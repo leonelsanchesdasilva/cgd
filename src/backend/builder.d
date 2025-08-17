@@ -228,7 +228,14 @@ private:
                 auto _stmt = result.get!Statement;
                 if (mainFunc !is null && _stmt !is null)
                 {
-                    mainFunc.addStatement(_stmt);
+                    if (currentFunc !is null)
+                    {
+                        currentFunc.addStatement(_stmt);
+                    }
+                    else
+                    {
+                        mainFunc.addStatement(_stmt);
+                    }
                 }
             }
 
@@ -238,7 +245,14 @@ private:
                 if (expr !is null && mainFunc !is null)
                 {
                     auto exprStmt = new ExpressionStatement(expr);
-                    mainFunc.addStatement(exprStmt);
+                    if (currentFunc !is null)
+                    {
+                        currentFunc.addStatement(exprStmt);
+                    }
+                    else
+                    {
+                        mainFunc.addStatement(exprStmt);
+                    }
                 }
             }
         }
@@ -266,7 +280,14 @@ private:
                 );
 
                 declarations ~= var;
-                this.mainFunc.addStatement(var);
+                if (currentFunc !is null)
+                {
+                    currentFunc.addStatement(var);
+                }
+                else
+                {
+                    mainFunc.addStatement(var);
+                }
             }
 
             return null;
@@ -327,14 +348,21 @@ private:
             }
 
             auto var = new VariableDeclarationCore(
-                getType(decl.type),
+                expr.type,
                 varName,
                 expr
             );
 
             declarations ~= var;
 
-            this.mainFunc.addStatement(var);
+            if (currentFunc !is null)
+            {
+                currentFunc.addStatement(var);
+            }
+            else
+            {
+                mainFunc.addStatement(var);
+            }
         }
 
         if (declarations.length == 1)
@@ -604,10 +632,45 @@ private:
         return new VariableExpression(type, name);
     }
 
+    import std.math : abs;
+
     Expression genBinaryExpr(BinaryExpr node)
     {
         auto leftExpr = asExpression(generate(node.left));
         auto rightExpr = asExpression(generate(node.right));
+
+        if (node.op == "**")
+        {
+            if (leftExpr.type.kind == TypeKind.Float64 || rightExpr.type.kind == TypeKind.Float64)
+            {
+                codegen.currentModule.addImport("std.math");
+
+                if (auto floatLit = cast(FloatLiteral) node.right)
+                {
+                    if (auto floatVal = floatLit.value.peek!float)
+                    {
+                        if (abs(*floatVal - 0.5f) < 1e-6f)
+                        {
+                            auto doubleType = Type(TypeKind.Float64, "double");
+                            auto sqrtCall = new CallExpression(doubleType, "sqrt", [
+                                    new CastExpression(doubleType, leftExpr)
+                                ]);
+
+                            auto intType = Type(TypeKind.Int32, "int");
+                            return new CastExpression(intType, sqrtCall);
+                        }
+                    }
+                }
+
+                return new CallExpression(leftExpr.type, "pow", [
+                        leftExpr, rightExpr
+                    ]);
+            }
+            else
+            {
+                node.op = "^^";
+            }
+        }
 
         return codegen.makeBinary(
             getType(node.type),
@@ -733,6 +796,14 @@ private:
                     func.addStatement(statement);
                 }
             }
+            else if (result.type == typeid(Expression))
+            {
+                auto statement = result.get!Expression;
+                if (statement !is null)
+                {
+                    func.addStatement(new ExpressionStatement(statement));
+                }
+            }
         }
 
         codegen.currentModule.addFunction(func);
@@ -744,13 +815,12 @@ private:
     {
         auto varName = node.id.value.get!string;
 
-        // Adiciona variável ao escopo atual
         addSymbol(varName, node.type, false);
 
         Expression expr = createInitializerExpression(node);
 
         auto var = new VariableDeclarationCore(
-            getType(node.type),
+            expr.type,
             varName,
             expr
         );
