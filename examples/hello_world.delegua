@@ -1,1 +1,3 @@
+importar "io"
+
 escrevaln('Hello World')

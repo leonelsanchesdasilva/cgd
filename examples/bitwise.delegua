@@ -1,3 +1,5 @@
+importar "io"
+
 // Definindo flags como constantes
 var FLAG_LEITURA = 0b100      // 4
 var FLAG_ESCRITA = 0b010      // 2  

@@ -1,3 +1,5 @@
+importar "io"
+
 função fibonacci(n: inteiro): inteiro {
     se n <= 1 retorna n
 

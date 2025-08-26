@@ -1,0 +1,3 @@
+var idade: inteiro = 17
+var novaIdade: texto = (texto)idade
+escrevaln(novaIdade)

@@ -1,3 +1,5 @@
+importar "io"
+
 função bhaskara(a: inteiro, b: inteiro, c: inteiro) {
     var f = 4 * a * c
     var d = (b ** 2 - f) ** 0.5

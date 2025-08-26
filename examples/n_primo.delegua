@@ -1,3 +1,5 @@
+importar "io"
+
 função ehPrimo(n: inteiro): logica {
     se (n < 2) retorna falso
     se (n == 2) retorna verdadeiro

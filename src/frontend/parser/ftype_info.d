@@ -11,6 +11,7 @@ struct FTypeInfo
     bool isPointer;
     bool isStruct;
     ulong pointerLevel;
+    string className;
 }
 
 TypesNative stringToTypesNative(string typeStr)
@@ -40,6 +41,7 @@ TypesNative stringToTypesNative(string typeStr)
     case "id":
         return TypesNative.VOID;
     default:
+        return TypesNative.CLASS;
         throw new Exception("Tipo não suportado para conversão: " ~ typeStr);
     }
 }
@@ -66,6 +68,14 @@ FTypeInfo createTypeInfo(TypesNative baseType, bool s = false)
         s,
         0
     );
+}
+
+FTypeInfo createClassType(string className)
+{
+    FTypeInfo info;
+    info.baseType = TypesNative.CLASS;
+    info.className = className;
+    return info;
 }
 
 FTypeInfo createArrayType(TypesNative baseType, ulong dimensions = 1, bool s = false)

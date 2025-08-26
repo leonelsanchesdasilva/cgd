@@ -17,6 +17,7 @@ class TypeChecker
     private string[string] typeMap;
     private int[string] typeHierarchy;
     private Semantic semanticAnalyzer;
+    private ClassDeclaration[string] availableClasses;
 
     this(Semantic semanticAnalyzer = null)
     {
@@ -49,6 +50,8 @@ class TypeChecker
         typeMap["null"] = "null";
         typeMap["id"] = "auto";
         typeMap["void"] = "void";
+        typeMap["void*"] = "void*";
+        typeMap["class"] = "void*";
     }
 
     public bool isValidType(string type)
@@ -85,7 +88,19 @@ class TypeChecker
             return "void";
         case TypesNative.ID:
             return "void*";
+        case TypesNative.CLASS:
+            return "class";
         }
+    }
+
+    public void registerClass(string className, ClassDeclaration classDecl)
+    {
+        availableClasses[className] = classDecl;
+    }
+
+    public bool isValidClass(string className)
+    {
+        return (className in availableClasses) !is null;
     }
 
     public bool isNumericType(string type)
@@ -121,9 +136,7 @@ class TypeChecker
             return true;
 
         if (isNumericType(sourceType) && isNumericType(targetType))
-        {
             return true;
-        }
 
         string[][string] compatibilityMap = [
             "int": ["float", "double", "i64", "long", "bool", "i128", "string"],
@@ -139,12 +152,13 @@ class TypeChecker
 
         if (sourceType in compatibilityMap &&
             compatibilityMap[sourceType].canFind(targetType))
-        {
             return true;
-        }
 
         if (sourceType == "id" || targetType == "id")
             return true;
+
+        if (sourceType.startsWith("class") && targetType.startsWith("class"))
+            return false;
 
         return false;
     }

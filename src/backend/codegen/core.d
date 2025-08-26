@@ -660,23 +660,6 @@ class StructDefinition
     Method[] methods;
     bool isClass; // true para class, false para struct
 
-    struct Field
-    {
-        Type type;
-        string name;
-        string defaultValue;
-
-        string toString() const
-        {
-            string result = type.toString() ~ " " ~ name;
-            if (defaultValue.length > 0)
-            {
-                result ~= " = " ~ defaultValue;
-            }
-            return result ~ ";";
-        }
-    }
-
     this(string name, bool isClass = false)
     {
         this.name = name;
@@ -731,6 +714,23 @@ class StructDefinition
 
         result.put("}\n");
         return result.data;
+    }
+}
+
+struct Field
+{
+    Type type;
+    string name;
+    string defaultValue;
+
+    string toString() const
+    {
+        string result = type.toString() ~ " " ~ name;
+        if (defaultValue.length > 0)
+        {
+            result ~= " = " ~ defaultValue;
+        }
+        return result ~ ";";
     }
 }
 
@@ -849,7 +849,8 @@ class MemberAccessExpression : Expression
 
     override string generateD()
     {
-        return object.generateD() ~ "." ~ memberName;
+        string obj = object.generateD();
+        return (obj == "isto" ? "this" : obj) ~ "." ~ memberName;
     }
 }
 
@@ -937,67 +938,6 @@ class ForeachStatement : Statement
     }
 }
 
-// class SwitchStatementCore : Statement
-// {
-//     Expression expression;
-//     CaseStatement[] cases;
-//     Statement defaultCase;
-
-//     struct CaseStatement
-//     {
-//         Expression[] values;
-//         Statement[] statements;
-//     }
-
-//     this(Expression expression)
-//     {
-//         this.expression = expression;
-//     }
-
-//     void addCase(Expression[] values, Statement[] statements)
-//     {
-//         cases ~= CaseStatement(values, statements);
-//     }
-
-//     void setDefault(Statement defaultCase)
-//     {
-//         this.defaultCase = defaultCase;
-//     }
-
-//     override string generateD(int indentLevel = 0)
-//     {
-//         auto result = appender!string();
-//         result.put(indent(indentLevel) ~ "switch (" ~ expression.generateD() ~ ") {\n");
-
-//         foreach (case_; cases)
-//         {
-//             foreach (value; case_.values)
-//             {
-//                 result.put(indent(indentLevel + 1) ~ "case " ~ value.generateD() ~ ":\n");
-//             }
-
-//             foreach (stmt; case_.statements)
-//             {
-//                 result.put(stmt.generateD(indentLevel + 2) ~ "\n");
-//             }
-
-//             if (case_.statements.length > 0)
-//             {
-//                 result.put(indent(indentLevel + 2) ~ "break;\n");
-//             }
-//         }
-
-//         if (defaultCase)
-//         {
-//             result.put(indent(indentLevel + 1) ~ "default:\n");
-//             result.put(defaultCase.generateD(indentLevel + 2) ~ "\n");
-//         }
-
-//         result.put(indent(indentLevel) ~ "}");
-//         return result.data;
-//     }
-// }
-
 class ExtendedModule : Module
 {
     StructDefinition[] structs;
@@ -1029,11 +969,21 @@ class ExtendedModule : Module
         }
 
         // Imports
-        foreach (imp; imports)
+        foreach (imp, value; imports)
         {
             result.put("import " ~ imp ~ ";\n");
         }
         if (imports.length > 0)
+        {
+            result.put("\n");
+        }
+
+        // Funções std
+        foreach (fn; stdFunctions)
+        {
+            result.put(fn ~ "\n");
+        }
+        if (stdFunctions.length > 0)
         {
             result.put("\n");
         }
@@ -1269,7 +1219,8 @@ class MethodCallExpression : Expression
         {
             args ~= arg.generateD();
         }
-        return format!"%s.%s(%s)"(object.generateD(), methodName, args.join(", "));
+        string obj = object.generateD();
+        return format!"%s.%s(%s)"(obj == "isto" ? "this" : obj, methodName, args.join(", "));
     }
 }
 

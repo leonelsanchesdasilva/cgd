@@ -1,3 +1,5 @@
+importar "io"
+
 var nome: texto = leia("Nome: ")
 
 escolha (nome) {

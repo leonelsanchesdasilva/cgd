@@ -22,6 +22,9 @@ enum NodeType
     ReturnStatement,
     FunctionDeclaration,
     AssignmentDeclaration,
+    ClassDeclaration,
+    ConstructorDeclaration,
+    DestructorDeclaration,
 
     IfStatement,
     ElseStatement,
@@ -31,6 +34,7 @@ enum NodeType
     CaseStatement,
     DefaultStatement,
     BreakStatement,
+    ImportStatement,
 
     IntLiteral,
     FloatLiteral,
@@ -44,7 +48,9 @@ enum NodeType
     CallExpr,
     CastExpr,
     BinaryExpr,
-    MemberCallExpr
+    MemberCallExpr,
+    NewExpr,
+    ThisExpr,
 }
 
 class Stmt
@@ -615,5 +621,145 @@ class BreakStatement : Stmt
         this.loc = loc;
         this.type = createTypeInfo(TypesNative.VOID);
         this.value = null;
+    }
+}
+
+enum ClassVisibility : string
+{
+    PRIVATE = "private",
+    PUBLIC = "public",
+}
+
+// a: inteiro = 10
+struct ClassProperty
+{
+    Identifier name;
+    FTypeInfo type;
+    ClassVisibility visibility;
+    Stmt defaultValue;
+}
+
+// a() {}
+class ClassMethodDeclaration : Stmt
+{
+    Identifier id;
+    FunctionArgs args;
+    Stmt[] body;
+    SymbolInfo[string] context; // compartilha com a classe
+    ClassVisibility visibility;
+
+    this(Identifier id, FunctionArgs args, Stmt[] body, FTypeInfo type, ClassVisibility visibility, Loc loc)
+    {
+        this.id = id;
+        this.args = args;
+        this.kind = NodeType.FunctionDeclaration;
+        this.body = body;
+        this.loc = loc;
+        this.type = type;
+        this.visibility = visibility;
+        this.value = null;
+    }
+}
+
+class ClassDeclaration : Stmt
+{
+    Identifier id; // ADICIONAR ESTA LINHA
+    ClassProperty[] properties;
+    ClassMethodDeclaration[] methods;
+    ConstructorDeclaration construct; // método construtor
+    DestructorDeclaration destruct; // método destrutor
+    SymbolInfo[string] context; // salva o contexto global
+
+    this(ClassProperty[] p, ClassMethodDeclaration[] m, Loc loc)
+    {
+        this.kind = NodeType.ClassDeclaration;
+        this.properties = p;
+        this.methods = m;
+        this.value = null;
+        this.type = createTypeInfo("null");
+        this.loc = loc;
+    }
+}
+
+// Adicionar novas classes AST:
+
+class ConstructorDeclaration : Stmt
+{
+    FunctionArgs args;
+    Stmt[] body;
+    SymbolInfo[string] context;
+
+    this(FunctionArgs args, Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.ConstructorDeclaration;
+        this.args = args;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+        this.value = null;
+    }
+}
+
+class DestructorDeclaration : Stmt
+{
+    Stmt[] body;
+    SymbolInfo[string] context;
+
+    this(Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.DestructorDeclaration;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.VOID);
+        this.value = null;
+    }
+}
+
+class NewExpr : Stmt
+{
+    Identifier className;
+    Stmt[] args;
+
+    this(Identifier className, Stmt[] args, Loc loc)
+    {
+        this.kind = NodeType.NewExpr;
+        this.className = className;
+        this.args = args;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL); // Será definido durante análise semântica
+        this.value = null;
+    }
+}
+
+class ThisExpr : Stmt
+{
+    this(Loc loc)
+    {
+        this.kind = NodeType.ThisExpr;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL); // Será definido durante análise semântica
+        this.value = null;
+    }
+}
+
+// importar "lib"
+// importar { ids, ... } de "lib"
+// importar "lib" como x
+// importar { ids, ... } de "lib" como x
+class ImportStatement : Stmt
+{
+    Identifier[] targets;
+    string from; // lib|file.delegua
+    string _alias;
+
+    this(string from, string _alias = "", Identifier[] targets = [], Loc loc)
+    {
+        this.kind = NodeType.ImportStatement;
+        this.value = null;
+        this.from = from;
+        this._alias = _alias;
+        this.targets = targets;
+        this.loc = loc;
+        this.type = createTypeInfo("null");
     }
 }

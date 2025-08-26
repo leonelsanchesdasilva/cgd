@@ -1,0 +1,14 @@
+importar "io"
+
+classe Usuario {
+    nome: texto = "Fernando";
+
+    obterNome(): texto
+    {
+        retorna isto.nome
+    }
+}
+
+var usuario = novo Usuario()
+escrevaln("Nome via propriedade: ", usuario.nome);
+escrevaln("Nome via método: ", usuario.obterNome());

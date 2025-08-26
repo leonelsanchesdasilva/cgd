@@ -37,15 +37,20 @@ enum TokenType
     COMO, // como
     DE, // de
     QUEBRAR, // quebrar (para switch)
+    IMPORTAR, // impotar
+    CLASSE, // classe
+    PRIVADO, // privado
+    PUBLICO, // publico
+    PROTEGIDO, // protegido
+    CONSTRUTOR, // construtor
+    DESTRUTOR, // destrutor
 
     // Future Reserved Words
-    CLASSE, // classe
     ENUM, // enum
     EXTENDE, // estende
     SUPER, // super
     CONST, // const
     EXPORTAR, // exportar
-    IMPORTAR, // importar
 
     IDENTIFIER, // x
 
@@ -188,15 +193,21 @@ shared static this()
     keywords["em"] = TokenType.EM;
     keywords["como"] = TokenType.COMO;
     keywords["de"] = TokenType.DE;
+    keywords["importar"] = TokenType.IMPORTAR;
+    keywords["classe"] = TokenType.CLASSE;
+    keywords["publico"] = TokenType.PUBLICO;
+    keywords["público"] = TokenType.PUBLICO;
+    keywords["privado"] = TokenType.PRIVADO;
+    keywords["protegido"] = TokenType.PROTEGIDO;
+    keywords["construtor"] = TokenType.CONSTRUTOR;
+    keywords["destrutor"] = TokenType.DESTRUTOR;
 
     // Future Reserved Words
-    keywords["classe"] = TokenType.CLASSE;
     keywords["enum"] = TokenType.ENUM;
     keywords["estende"] = TokenType.EXTENDE;
     keywords["super"] = TokenType.SUPER;
     keywords["const"] = TokenType.CONST;
     keywords["exportar"] = TokenType.EXPORTAR;
-    keywords["importar"] = TokenType.IMPORTAR;
 }
 
 bool isTypeToken(Token token)

@@ -1,3 +1,5 @@
+importar "io"
+
 var n = 15
 para var i = 1; i <= n; i = i + 1 {
     var resultado = ''

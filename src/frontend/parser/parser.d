@@ -1,6 +1,7 @@
 module frontend.parser.parser;
 
 import std.algorithm;
+import std.typecons;
 import std.format;
 import std.stdio;
 import std.conv;
@@ -86,6 +87,18 @@ private:
             return this.parseSwitchStatement();
         case TokenType.QUEBRAR:
             return this.parseBreakStatement();
+        case TokenType.IMPORTAR:
+            return this.parseImportStatement();
+        case TokenType.CLASSE:
+            return this.parseClassDeclaration();
+        case TokenType.NOVO:
+            return this.parseNewExpression();
+        case TokenType.ISTO:
+            if (this.peek()
+                .kind == TokenType.DOT)
+                return this.parseMemberCallExpression(new Identifier(token.value.get!string, token
+                        .loc));
+            return new ThisExpr(token.loc);
 
             // Others
         case TokenType.IDENTIFIER:
@@ -126,6 +139,274 @@ private:
         default:
             throw new Exception("Noo prefix parse function for " ~ to!string(token));
         }
+    }
+
+    Stmt parseNewExpression()
+    {
+        Loc start = this.previous().loc;
+        Token classNameToken = this.consume(TokenType.IDENTIFIER, "Esperado nome da classe após 'novo'.");
+        Identifier className = new Identifier(classNameToken.value.get!string, classNameToken.loc);
+
+        this.consume(TokenType.LPAREN, "Esperado '(' após nome da classe.");
+        Stmt[] args = [];
+
+        if (!this.check(TokenType.RPAREN))
+        {
+            do
+            {
+                args ~= this.parseExpression(Precedence.LOWEST);
+            }
+            while (this.match([TokenType.COMMA]));
+        }
+
+        Loc end = this.consume(TokenType.RPAREN, "Esperado ')' após argumentos do construtor.")
+            .loc;
+
+        return new NewExpr(className, args, this.makeLoc(start, end));
+    }
+
+    Stmt parseClassDeclaration()
+    {
+        Loc start = this.previous().loc;
+        Token name = this.consume(TokenType.IDENTIFIER, "Esperado um identificador para o nome da classe.");
+        this.consume(TokenType.LBRACE, "Esperado '{' após o nome da classe.");
+
+        auto classBlockResult = this.parseClassBlock();
+        ClassProperty[] properties = classBlockResult[1];
+        ClassMethodDeclaration[] methods = classBlockResult[0];
+
+        // Encontrar construtor e destrutor
+        ConstructorDeclaration constructor = null;
+        DestructorDeclaration destructor = null;
+
+        foreach (method; methods)
+        {
+            if (method.kind == NodeType.ConstructorDeclaration)
+            {
+                constructor = cast(ConstructorDeclaration) method;
+            }
+            else if (method.kind == NodeType.DestructorDeclaration)
+            {
+                destructor = cast(DestructorDeclaration) method;
+            }
+        }
+
+        this.consume(TokenType.RBRACE, "Esperado '}' após a classe.");
+
+        ClassDeclaration classDecl = new ClassDeclaration(properties, methods, this.makeLoc(start, this.previous()
+                .loc));
+        classDecl.id = new Identifier(name.value.get!string, name.loc);
+        classDecl.construct = constructor;
+        classDecl.destruct = destructor;
+
+        return classDecl;
+    }
+
+    // Implementação completa de parseClassBlock:
+    Tuple!(ClassMethodDeclaration[], ClassProperty[]) parseClassBlock()
+    {
+        ClassMethodDeclaration[] methods;
+        ClassProperty[] properties;
+
+        while (this.peek().kind != TokenType.RBRACE && !this.isAtEnd())
+        {
+            ClassVisibility visibility = ClassVisibility.PUBLIC; // público por padrão
+
+            // Verificar visibilidade
+            if (this.check(TokenType.PUBLICO))
+            {
+                this.advance();
+                visibility = ClassVisibility.PUBLIC;
+            }
+            else if (this.check(TokenType.PRIVADO))
+            {
+                this.advance();
+                visibility = ClassVisibility.PRIVATE;
+            }
+
+            if (this.check(TokenType.CONSTRUTOR))
+            {
+                methods ~= cast(ClassMethodDeclaration) this.parseConstructor(visibility);
+            }
+            else if (this.check(TokenType.DESTRUTOR))
+            {
+                methods ~= cast(ClassMethodDeclaration) this.parseDestructor(visibility);
+            }
+            else if (this.check(TokenType.IDENTIFIER))
+            {
+                // Pode ser propriedade ou método
+                ulong savedPos = this.pos;
+                Token identifier = this.advance();
+
+                if (this.check(TokenType.COLON))
+                {
+                    // É uma propriedade
+                    this.pos = savedPos; // Volta para o identificador
+                    properties ~= this.parseClassProperty(visibility);
+                }
+                else if (this.check(TokenType.LPAREN))
+                {
+                    // É um método
+                    this.pos = savedPos; // Volta para o identificador
+                    methods ~= this.parseClassMethod(visibility);
+                }
+                else
+                {
+                    throw new Exception(
+                        "Esperado ':' para propriedade ou '(' para método após identificador na classe.");
+                }
+            }
+            else
+            {
+                throw new Exception(
+                    "Esperado identificador, 'construtor', 'destrutor', 'publico' ou 'privado' dentro da classe.");
+            }
+        }
+
+        return tuple(methods, properties);
+    }
+
+    // Implementar parseConstructor:
+    Stmt parseConstructor(ClassVisibility visibility)
+    {
+        Loc start = this.advance().loc; // consome 'construtor'
+        FunctionArgs args = this.parseFnArguments();
+
+        this.consume(TokenType.LBRACE, "Esperado '{' após argumentos do construtor.");
+        Stmt[] body;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Loc end = this.consume(TokenType.RBRACE, "Esperado '}' após corpo do construtor.").loc;
+
+        ConstructorDeclaration constructor = new ConstructorDeclaration(args, body, this.makeLoc(start, end));
+
+        return constructor;
+    }
+
+    // Implementar parseDestructor:
+    Stmt parseDestructor(ClassVisibility visibility)
+    {
+        Loc start = this.advance().loc; // consome 'destrutor'
+        this.consume(TokenType.LPAREN, "Esperado '(' após 'destrutor'.");
+        this.consume(TokenType.RPAREN, "Esperado ')' após '(' do destrutor.");
+
+        this.consume(TokenType.LBRACE, "Esperado '{' após parênteses do destrutor.");
+        Stmt[] body;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Loc end = this.consume(TokenType.RBRACE, "Esperado '}' após corpo do destrutor.").loc;
+
+        DestructorDeclaration destructor = new DestructorDeclaration(body, this.makeLoc(start, end));
+
+        return destructor;
+    }
+
+    // Implementar parseClassProperty:
+    ClassProperty parseClassProperty(ClassVisibility visibility)
+    {
+        Token nameToken = this.consume(TokenType.IDENTIFIER, "Esperado identificador para nome da propriedade.");
+        Identifier name = new Identifier(nameToken.value.get!string, nameToken.loc);
+
+        this.consume(TokenType.COLON, "Esperado ':' após nome da propriedade.");
+
+        // Parse do tipo
+        Token[] typeTokens;
+        while (this.peek().kind != TokenType.EQUALS &&
+            this.peek()
+            .kind != TokenType.SEMICOLON &&
+            !this.isAtEnd())
+        {
+            typeTokens ~= this.advance();
+        }
+
+        FTypeInfo type = new ParseType(typeTokens).parse();
+        Stmt defaultValue = null;
+
+        // Verificar se há valor padrão
+        if (this.match([TokenType.EQUALS]))
+        {
+            defaultValue = this.parseExpression(Precedence.LOWEST);
+        }
+
+        this.match([TokenType.SEMICOLON]); // Semicolon opcional
+
+        return ClassProperty(name, type, visibility, defaultValue);
+    }
+
+    // Implementar parseClassMethod:
+    ClassMethodDeclaration parseClassMethod(ClassVisibility visibility)
+    {
+        Token nameToken = this.consume(TokenType.IDENTIFIER, "Esperado identificador para nome do método.");
+        Identifier name = new Identifier(nameToken.value.get!string, nameToken.loc);
+
+        FunctionArgs args = this.parseFnArguments();
+        FTypeInfo returnType = createTypeInfo(TypesNative.VOID);
+
+        if (this.match([TokenType.COLON]))
+        {
+            Token[] fnTokens;
+            while (this.peek().kind != TokenType.LBRACE)
+            {
+                fnTokens ~= this.advance();
+            }
+            returnType = new ParseType(fnTokens).parse();
+        }
+
+        this.consume(TokenType.LBRACE, "Esperado '{' antes do corpo do método.");
+        Stmt[] body;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Token end = this.consume(TokenType.RBRACE, "Esperado '}' após corpo do método.");
+
+        return new ClassMethodDeclaration(name, args, body, returnType, visibility,
+            this.makeLoc(nameToken.loc, end.loc));
+    }
+
+    Stmt parseImportStatement()
+    {
+        // importar "lib"
+        // importar { ids, ... } de "lib"
+        // importar "lib" como x
+        // importar { ids, ... } de "lib" como x
+        Loc start = this.previous().loc;
+        Identifier[] targets;
+        string _alias;
+        string from; // lib|file.delegua
+
+        if (this.match([TokenType.LBRACE]))
+        {
+            while (this.peek().kind != TokenType.RBRACE && !this.isAtEnd())
+            {
+                Token target = this.consume(TokenType.IDENTIFIER, "Esperado um identificador.");
+                targets ~= new Identifier(target.value.get!string, target.loc);
+                this.match([TokenType.COMMA]);
+            }
+            this.consume(TokenType.RBRACE, "Esperado '}' após os alvos da importação.");
+        }
+
+        this.match([TokenType.DE]);
+        Token _from = this.consume(TokenType.STRING, "Esperado uma string para a importação."); // TODO: melhorar esse cu
+        from = _from.value.get!string;
+
+        if (this.match([TokenType.COMO]))
+        {
+            Token __alias = this.consume(TokenType.IDENTIFIER, "Esperado um identificador para o nome do apelido."); // TODO: melhorar esse cu
+            _alias = __alias.value.get!string;
+        }
+
+        return new ImportStatement(from, _alias, targets, start);
     }
 
     Stmt parseSwitchStatement()

@@ -51,7 +51,7 @@ struct StdLibModule
 
 class StdLibModuleBuilder
 {
-    private StdLibModule moduleData;
+    StdLibModule moduleData;
 
     this(string name)
     {
