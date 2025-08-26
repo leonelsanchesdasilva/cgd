@@ -10,13 +10,13 @@ Compilador para a linguagem de programação [Delegua](https://github.com/Design
 
 ## Instalação
 
-**📋 Para instruções detalhadas de instalação, consulte o [INSTALL.md](INSTALL.md)**
+**Para instruções detalhadas de instalação, consulte o [INSTALL.md](INSTALL.md)**
 
 ### Instalação rápida
 
 ```bash
 # Linux/macOS - Instalação automática
-curl -fsSL https://raw.githubusercontent.com/FernandoTheDev/cgd/main/install.sh | sh
+curl -fsSL https://github.com/FernandoTheDev/cgd/raw/refs/heads/master/install.sh | sh
 
 # Verificar instalação
 cgd --help
