@@ -149,7 +149,7 @@ private:
 
         command ~= "--flto=full";
 
-        command ~= "--mcpu=native";
+        // command ~= "--mcpu=native";
 
         command ~= "--release";
 

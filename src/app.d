@@ -11,10 +11,11 @@ import frontend.parser.ast;
 import middle.semantic;
 import backend.builder;
 import backend.compiler;
+import updater;
 
 alias fileWrite = std.file.write;
 
-enum string VERSAO = "0.0.3";
+enum string VERSAO = "v0.0.4";
 enum string NOME_PROGRAMA = "cgd";
 enum string NOME_COMPLETO = "Compilador Geral Delégua";
 
@@ -27,7 +28,7 @@ void main(string[] args)
 
 	try
 	{
-		auto resultado = getopt(args,
+		getopt(args,
 			"o|output", "Especifica o arquivo de saída", &arquivoSaida,
 			"v|version", "Mostra a versão do compilador", &mostrarVersao,
 			"h|help", "Mostra esta mensagem de ajuda", &mostrarAjuda,
@@ -46,20 +47,27 @@ void main(string[] args)
 			return;
 		}
 
+		string comando = args[1];
+
+		if (comando == "atualizar" || comando == "upgrade")
+		{
+			executarAtualizacao(verboso);
+			return;
+		}
+
 		if (args.length < 3)
 		{
-			writeln("cgd: erro: comando ou arquivo não especificado");
+			writeln("cgd: erro: arquivo não especificado");
 			writeln("Digite 'cgd --help' para mais informações.");
 			return;
 		}
 
-		string comando = args[1];
 		string arquivo = args[2];
 
 		if (comando != "compilar" && comando != "transpilar")
 		{
 			writefln("cgd: erro: comando desconhecido '%s'", comando);
-			writeln("Comandos disponíveis: compilar, transpilar");
+			writeln("Comandos disponíveis: compilar, transpilar, atualizar");
 			writeln("Digite 'cgd --help' para mais informações.");
 			return;
 		}
@@ -112,13 +120,33 @@ void main(string[] args)
 	}
 }
 
+void executarAtualizacao(bool verboso)
+{
+	try
+	{
+		UpdaterConfig config = UpdaterConfig(verboso, false, true, "");
+		Updater updater = new Updater("FernandoTheDev", "cgd", VERSAO, config);
+		updater.performUpdate();
+	}
+	catch (Exception e)
+	{
+		writefln("cgd: erro na atualização: %s", e.msg);
+		if (verboso)
+		{
+			writeln("Detalhes do erro:");
+			writeln(e.toString());
+		}
+	}
+}
+
 void mostrarMensagemAjuda()
 {
-	writeln("Uso: cgd [OPÇÕES] COMANDO ARQUIVO");
+	writeln("Uso: cgd [OPÇÕES] COMANDO [ARQUIVO]");
 	writeln("");
 	writeln("Comandos:");
 	writeln("  compilar    Compila o arquivo Delegua para código executável");
 	writeln("  transpilar  Transpila o arquivo Delegua para código D");
+	writeln("  atualizar   Verifica e instala atualizações do compilador");
 	writeln("");
 	writeln("Opções:");
 	writeln("  -o, --output ARQUIVO  Especifica o arquivo de saída");
@@ -130,13 +158,14 @@ void mostrarMensagemAjuda()
 	writeln("  cgd compilar arquivo.delegua");
 	writeln("  cgd transpilar arquivo.delegua -o saida.d");
 	writeln("  cgd compilar arquivo.delegua --output meuapp");
+	writeln("  cgd atualizar --verbose");
 	writeln("");
 	mostrarCopyright();
 }
 
 void mostrarVersaoPrograma()
 {
-	writefln("%s (%s) v%s", NOME_COMPLETO, NOME_PROGRAMA, VERSAO);
+	writefln("%s (%s) %s", NOME_COMPLETO, NOME_PROGRAMA, VERSAO);
 }
 
 void mostrarCopyright()
@@ -192,7 +221,7 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 			}
 			else
 			{
-				writeln("Iniciando transpiração...");
+				writeln("Iniciando Transpilação...");
 			}
 		}
 
@@ -236,8 +265,6 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 	}
 	catch (Exception e)
 	{
-		writefln("cgd: erro durante o processamento: %s", e.file);
-		writefln("cgd: erro durante o processamento: %d", e.line);
 		writefln("cgd: erro durante o processamento: %s", e.msg);
 		if (verboso)
 		{

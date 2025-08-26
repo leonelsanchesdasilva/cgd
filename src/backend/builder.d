@@ -40,6 +40,10 @@ private:
     Symbol[string][] scopeStack;
     Symbol[string] globalScope;
 
+    // Para suporte a classes
+    StructDefinition currentClass;
+    string[string] classTypes; // Mapeia nomes de classes para tipos
+
     Type getType(FTypeInfo t)
     {
         if (auto cached = t.baseType in typeCache)
@@ -65,7 +69,15 @@ private:
             result = this.codegen.makeFloatType();
             break;
         default:
-            throw new Exception(format("Tipo desconhecido '%s'.", t.baseType));
+            // Verificar se é um tipo de classe customizado
+            if (t.className in classTypes)
+            {
+                result = Type(TypeKind.Custom, t.className);
+            }
+            else
+            {
+                throw new Exception(format("Tipo desconhecido '%s'.", t.baseType));
+            }
         }
 
         typeCache[t.baseType] = result;
@@ -127,13 +139,14 @@ private:
 
     GenerationResult generate(Stmt node)
     {
-        enforce(node !is null, "generate() recebeu null — verifique initializers no AST.");
+        enforce(node !is null, "generate() recebeu null – verifique initializers no AST.");
 
         switch (node.kind)
         {
         case NodeType.Program:
             return GenerationResult(genProgram(cast(Program) node));
 
+            // Declarações de variáveis
         case NodeType.VariableDeclaration:
             return GenerationResult(genVariableDeclaration(cast(VariableDeclaration) node));
         case NodeType.UninitializedVariableDeclaration:
@@ -146,10 +159,22 @@ private:
             return GenerationResult(
                 genMultipleUninitializedVariableDeclaration(
                     cast(MultipleUninitializedVariableDeclaration) node));
+
+            // Declarações de função
         case NodeType.FunctionDeclaration:
             return GenerationResult(genFunctionDeclaration(cast(FunctionDeclaration) node));
         case NodeType.ReturnStatement:
             return GenerationResult(genReturnStatement(cast(ReturnStatement) node));
+
+            // Declarações de classe
+        case NodeType.ClassDeclaration:
+            return GenerationResult(genClassDeclaration(cast(ClassDeclaration) node));
+        case NodeType.ConstructorDeclaration:
+            return GenerationResult(genConstructorDeclaration(cast(ConstructorDeclaration) node));
+        case NodeType.DestructorDeclaration:
+            return GenerationResult(genDestructorDeclaration(cast(DestructorDeclaration) node));
+
+            // Statements de controle
         case NodeType.IfStatement:
             return GenerationResult(genIfStatement(cast(IfStatement) node));
         case NodeType.ElseStatement:
@@ -160,8 +185,6 @@ private:
             return GenerationResult(genForStatement(cast(ForStatement) node));
         case NodeType.AssignmentDeclaration:
             return GenerationResult(genAssignmentDeclaration(cast(AssignmentDeclaration) node));
-        case NodeType.MemberCallExpr:
-            return GenerationResult(genMemberCallExpr(cast(MemberCallExpr) node));
         case NodeType.SwitchStatement:
             return GenerationResult(genSwitchStatement(cast(SwitchStatement) node));
         case NodeType.CaseStatement:
@@ -170,7 +193,10 @@ private:
             return GenerationResult(genDefaultStatement(cast(DefaultStatement) node));
         case NodeType.BreakStatement:
             return GenerationResult(genBreakStatement(cast(BreakStatement) node));
+        case NodeType.ImportStatement:
+            return Variant(null);
 
+            // Literais
         case NodeType.StringLiteral:
             return GenerationResult(genStringLiteral(cast(StringLiteral) node));
         case NodeType.IntLiteral:
@@ -182,9 +208,11 @@ private:
         case NodeType.NullLiteral:
             return GenerationResult(genNullLiteral(cast(NullLiteral) node));
 
+            // Identificadores
         case NodeType.Identifier:
             return GenerationResult(genIdentifier(cast(Identifier) node));
 
+            // Expressões
         case NodeType.BinaryExpr:
             return GenerationResult(genBinaryExpr(cast(BinaryExpr) node));
         case NodeType.UnaryExpr:
@@ -197,6 +225,12 @@ private:
             return GenerationResult(genDereferenceExpr(cast(DereferenceExpr) node));
         case NodeType.AddressOfExpr:
             return GenerationResult(genAddressOfExpr(cast(AddressOfExpr) node));
+        case NodeType.MemberCallExpr:
+            return GenerationResult(genMemberCallExpr(cast(MemberCallExpr) node));
+        case NodeType.NewExpr:
+            return GenerationResult(genNewExpr(cast(NewExpr) node));
+        case NodeType.ThisExpr:
+            return GenerationResult(genThisExpr(cast(ThisExpr) node));
 
         default:
             throw new Exception(format("NodeType desconhecido '%s'.", node.kind));
@@ -215,10 +249,273 @@ private:
         return result.get!Expression;
     }
 
+    // Novos métodos para classes
+    Statement genClassDeclaration(ClassDeclaration node)
+    {
+        auto className = node.id.value.get!string;
+
+        // Registrar o tipo de classe
+        classTypes[className] = className;
+
+        // Criar estrutura de classe
+        currentClass = new StructDefinition(className, true); // true para class
+
+        pushScope(); // Criar escopo para membros da classe
+        scope (exit)
+            popScope();
+
+        // Processar propriedades
+        foreach (prop; node.properties)
+        {
+            auto propName = prop.name.value.get!string;
+            auto propType = getType(prop.type);
+
+            string defaultValue = "";
+            if (prop.defaultValue !is null)
+            {
+                auto defaultExpr = asExpression(generate(prop.defaultValue));
+                defaultValue = defaultExpr.generateD();
+            }
+
+            currentClass.addField(propType, propName, defaultValue);
+
+            // Adicionar propriedade ao escopo
+            addSymbol(propName, prop.type, false);
+        }
+
+        // Processar construtor
+        if (node.construct !is null)
+        {
+            auto constructor = genConstructorMethod(node.construct);
+            currentClass.addMethod(constructor);
+        }
+
+        // Processar destrutor
+        if (node.destruct !is null)
+        {
+            auto destructor = genDestructorMethod(node.destruct);
+            currentClass.addMethod(destructor);
+        }
+
+        // Processar métodos
+        foreach (method; node.methods)
+        {
+            auto methodGen = genClassMethod(method);
+            currentClass.addMethod(methodGen);
+        }
+
+        // Adicionar classe ao módulo
+        if (auto extCodegen = cast(ExtendedCodeGenerator) codegen)
+        {
+            extCodegen.addStruct(currentClass);
+        }
+
+        // Adicionar classe ao escopo global
+        addSymbol(className, FTypeInfo(TypesNative.NULL), false);
+
+        currentClass = null;
+        return null;
+    }
+
+    Method genConstructorMethod(ConstructorDeclaration node)
+    {
+        Parameter[] params;
+        params.reserve(node.args.length);
+        foreach (arg; node.args)
+        {
+            params ~= Parameter(getType(arg.type), arg.id.value.get!string);
+        }
+
+        auto constructor = new Method(
+            Type(TypeKind.Void),
+            "this",
+            params,
+            false,
+            "public"
+        );
+
+        // Processar corpo do construtor
+        pushScope();
+        scope (exit)
+            popScope();
+
+        // Adicionar parâmetros ao escopo
+        foreach (arg; node.args)
+        {
+            addSymbol(arg.id.value.get!string, arg.type, false);
+        }
+
+        foreach (stmt; node.body)
+        {
+            auto result = generate(stmt);
+            if (result.type == typeid(Statement))
+            {
+                auto statement = result.get!Statement;
+                if (statement !is null)
+                {
+                    constructor.addStatement(statement);
+                }
+            }
+            else if (result.type == typeid(Expression))
+            {
+                auto statement = result.get!Expression;
+                if (statement !is null)
+                {
+                    constructor.addStatement(new ExpressionStatement(statement));
+                }
+            }
+        }
+
+        return constructor;
+    }
+
+    Method genDestructorMethod(DestructorDeclaration node)
+    {
+        auto destructor = new Method(
+            Type(TypeKind.Void),
+            "~this",
+            [],
+            false,
+            "public"
+        );
+
+        // Processar corpo do destrutor
+        pushScope();
+        scope (exit)
+            popScope();
+
+        foreach (stmt; node.body)
+        {
+            auto result = generate(stmt);
+            if (result.type == typeid(Statement))
+            {
+                auto statement = result.get!Statement;
+                if (statement !is null)
+                {
+                    destructor.addStatement(statement);
+                }
+            }
+            else if (result.type == typeid(Expression))
+            {
+                auto statement = result.get!Expression;
+                if (statement !is null)
+                {
+                    destructor.addStatement(new ExpressionStatement(statement));
+                }
+            }
+        }
+
+        return destructor;
+    }
+
+    Method genClassMethod(ClassMethodDeclaration node)
+    {
+        auto methodName = node.id.value.get!string;
+
+        Parameter[] params;
+        params.reserve(node.args.length);
+        foreach (arg; node.args)
+        {
+            params ~= Parameter(getType(arg.type), arg.id.value.get!string);
+        }
+
+        string visibility = node.visibility == ClassVisibility.PRIVATE ? "private" : "public";
+
+        auto method = new Method(
+            getType(node.type),
+            methodName,
+            params,
+            false,
+            visibility
+        );
+
+        // Processar corpo do método
+        pushScope();
+        scope (exit)
+            popScope();
+
+        // Adicionar parâmetros ao escopo
+        foreach (arg; node.args)
+        {
+            addSymbol(arg.id.value.get!string, arg.type, false);
+        }
+
+        foreach (stmt; node.body)
+        {
+            auto result = generate(stmt);
+            if (result.type == typeid(Statement))
+            {
+                auto statement = result.get!Statement;
+                if (statement !is null)
+                {
+                    method.addStatement(statement);
+                }
+            }
+            else if (result.type == typeid(Expression))
+            {
+                auto statement = result.get!Expression;
+                if (statement !is null)
+                {
+                    method.addStatement(new ExpressionStatement(statement));
+                }
+            }
+        }
+
+        return method;
+    }
+
+    Statement genConstructorDeclaration(ConstructorDeclaration node)
+    {
+        // Este método é chamado quando encontramos um construtor fora de uma classe
+        // Normalmente isso não deveria acontecer, mas podemos tratar como erro
+        throw new Exception("Construtor encontrado fora de uma declaração de classe");
+    }
+
+    Statement genDestructorDeclaration(DestructorDeclaration node)
+    {
+        // Este método é chamado quando encontramos um destrutor fora de uma classe
+        // Normalmente isso não deveria acontecer, mas podemos tratar como erro
+        throw new Exception("Destrutor encontrado fora de uma declaração de classe");
+    }
+
+    Expression genNewExpr(NewExpr node)
+    {
+        auto className = node.className.value.get!string;
+
+        if (className !in classTypes)
+        {
+            throw new Exception(format("Classe '%s' não foi declarada", className));
+        }
+
+        Expression[] args;
+        args.reserve(node.args.length);
+        foreach (arg; node.args)
+        {
+            args ~= asExpression(generate(arg));
+        }
+
+        auto classType = Type(TypeKind.Custom, className);
+        return new NewExpression(classType, args);
+    }
+
+    Expression genThisExpr(ThisExpr node)
+    {
+        if (currentClass is null)
+        {
+            throw new Exception("'isto' usado fora de uma classe");
+        }
+
+        auto classType = Type(TypeKind.Custom, currentClass.name);
+
+        return new VariableExpression(classType, "this");
+    }
+
+    // Métodos existentes (mantidos como estavam)
     Statement genProgram(Program node)
     {
         pushScope();
 
+        // Primeiro passo: registrar todas as funções e classes
         foreach (stmt; node.body)
         {
             if (stmt.kind == NodeType.FunctionDeclaration)
@@ -227,8 +524,16 @@ private:
                 auto funcName = funcDecl.id.value.get!string;
                 addSymbol(funcName, funcDecl.type, true);
             }
+            else if (stmt.kind == NodeType.ClassDeclaration)
+            {
+                auto classDecl = cast(ClassDeclaration) stmt;
+                auto className = classDecl.id.value.get!string;
+                classTypes[className] = className;
+                addSymbol(className, FTypeInfo(TypesNative.NULL), false);
+            }
         }
 
+        // Segundo passo: processar todas as declarações
         foreach (stmt; node.body)
         {
             auto result = generate(stmt);
@@ -280,15 +585,12 @@ private:
         {
             // É uma chamada de método
             Expression[] args;
-            args ~= objectExpr;
             foreach (arg; node.args)
             {
                 args ~= asExpression(generate(arg));
             }
 
-            // Cria uma expressão de chamada de método usando MemberAccessExpression + CallExpression
-            auto memberAccess = new MemberAccessExpression(getType(node.type), objectExpr, memberName);
-            return new CallExpression(getType(node.type), memberName, args);
+            return new MethodCallExpression(getType(node.type), objectExpr, memberName, args);
         }
         else
         {
@@ -716,17 +1018,27 @@ private:
         return new LiteralExpression(getType(node.type), "null");
     }
 
-    Expression genIdentifier(Identifier node)
+    Expression genIdentifier(Identifier node, bool isThis = false)
     {
         auto name = node.value.get!string;
+        Type type;
 
-        auto symbol = lookupSymbol(name);
-        if (symbol is null)
+        if (node.type.baseType == TypesNative.CLASS)
         {
-            throw new Exception(format("Variável/função '%s' não foi declarada", name));
+            // node.value = Variant("this"); // vamos substituir o 'isto' para 'this'
+            type = getType(node.type);
+        }
+        else
+        {
+            auto symbol = lookupSymbol(name);
+            if (symbol is null)
+            {
+                throw new Exception(format("Variável/função '%s' não foi declarada", name));
+            }
+
+            type = getType((*symbol).type);
         }
 
-        auto type = getType((*symbol).type);
         return new VariableExpression(type, name);
     }
 
@@ -986,7 +1298,9 @@ public:
     {
         this.semantic = semantic;
         this.program = program;
-        this.codegen = new CodeGenerator("main");
+
+        // Usar ExtendedCodeGenerator para suporte a classes
+        this.codegen = new ExtendedCodeGenerator("main");
         this.mainFunc = new Function(getType(FTypeInfo(TypesNative.VOID)), "main");
 
         // importando as funções std para nosso contexto atual
@@ -1004,8 +1318,15 @@ public:
         // Adicionando as bibliotecas
         if (this.semantic.availableStdFunctions.length > 0)
         {
+            // writeln("Adicionando bibliotecas.");
+            // writeln("Current Module: ", codegen.currentModule.name);
+            // writeln(codegen.currentModule.imports);
+            // writeln(codegen.currentModule.functions[0]);
+            // writeln(codegen.currentModule.globalStatements);
+            // writeln(codegen.currentModule.stdFunctions);
             foreach (string name, StdLibFunction fn; this.semantic.availableStdFunctions)
             {
+                // writeln(fn.ir);
                 codegen.currentModule.addStdFunction(fn.ir);
             }
         }

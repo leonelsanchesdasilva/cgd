@@ -180,6 +180,16 @@ class TestadorCGD
                 true,
                 false,
                 5
+            ),
+            CasoTeste(
+                "Classe Usuario",
+                "examples/classe.delegua",
+                [
+                    "Nome via propriedade: Fernando", "Nome via método: Fernando"
+                ],
+                true,
+                false,
+                5
             )
         ];
     }

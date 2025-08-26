@@ -1,3 +1,5 @@
+importar "io"
+
 var nome, idade = "Fernando", 17
 var a, b = 1, 2
 var c, d: float = 1.5, 2.5

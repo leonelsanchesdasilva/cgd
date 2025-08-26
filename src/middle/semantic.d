@@ -23,44 +23,36 @@ public:
     bool[string] importedModules;
     StdLibModule[string] stdLibs;
     bool[string] identifiersUsed;
+    string currentClassName = ""; // Para rastrear contexto de classe
 
     this()
     {
         this.pushScope();
         this.typeChecker = getTypeChecker(this);
 
+        // TODO: Criar uma classe para setar os módulos|libs
         // Vamos adicionar isso aqui temporariamente
-        StdLibModuleBuilder mod = new StdLibModuleBuilder("io");
-        importedModules["io"] = true;
-
-        auto fn1 = new FunctionBuilder("escreva", mod)
+        StdLibModuleBuilder mod = new StdLibModuleBuilder("io")
+            .defineFunction("escreva")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
             .customTargetType("void")
             .libraryName("io_escreva")
-            .generateDExternComplete();
-
-        auto fn2 = new FunctionBuilder("escrevaln", mod)
+            .generateDExternComplete()
+            .done()
+            .defineFunction("escrevaln")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
             .customTargetType("void")
             .libraryName("io_escrevaln")
-            .generateDExternComplete();
+            .generateDExternComplete()
+            .done();
 
-        auto fn3 = new FunctionBuilder("leia", mod)
-            .returns(createTypeInfo(TypesNative.STRING))
-            .withParams(["string"])
-            .customTargetType("string")
-            .libraryName("io_leia")
-            .generateDExternComplete();
-
-        auto escreva = fn1.done();
-        auto escrevaln = fn2.done();
-        auto leia = fn3.done();
-
-        availableStdFunctions["escreva"] = escreva.getFunction("escreva");
-        availableStdFunctions["escrevaln"] = escrevaln.getFunction("escrevaln");
-        availableStdFunctions["leia"] = leia.getFunction("leia");
+        this.stdLibs["io"] = mod.moduleData;
+        // importedModules["io"] = true;
+        // availableStdFunctions["escreva"] = escreva.getFunction("escreva");
+        // availableStdFunctions["escrevaln"] = escrevaln.getFunction("escrevaln");
+        // availableStdFunctions["leia"] = leia.getFunction("leia");
     }
 
     Program semantic(Program program)
@@ -175,6 +167,24 @@ private:
         case NodeType.BreakStatement:
             analyzedNode = this.analyzeBreakStatement(cast(BreakStatement) node);
             break;
+        case NodeType.ImportStatement:
+            analyzedNode = this.analyzeImportStatement(cast(ImportStatement) node);
+            break;
+        case NodeType.ClassDeclaration:
+            analyzedNode = this.analyzeClassDeclaration(cast(ClassDeclaration) node);
+            break;
+        case NodeType.ConstructorDeclaration:
+            analyzedNode = this.analyzeConstructorDeclaration(cast(ConstructorDeclaration) node);
+            break;
+        case NodeType.DestructorDeclaration:
+            analyzedNode = this.analyzeDestructorDeclaration(cast(DestructorDeclaration) node);
+            break;
+        case NodeType.NewExpr:
+            analyzedNode = this.analyzeNewExpr(cast(NewExpr) node);
+            break;
+        case NodeType.ThisExpr:
+            analyzedNode = this.analyzeThisExpr(cast(ThisExpr) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -192,10 +202,208 @@ private:
         return analyzedNode;
     }
 
+    ClassDeclaration analyzeClassDeclaration(ClassDeclaration node)
+    {
+        string className = node.id.value.get!string;
+
+        if (className in this.availableFunctions || className in this.availableStdFunctions)
+        {
+            throw new Exception(format("Nome '%s' já está em uso.", className));
+        }
+
+        // Criar tipo personalizado para a classe
+        FTypeInfo classType = createClassType(className);
+
+        // Registrar a classe no TypeChecker
+        this.typeChecker.registerClass(className, node);
+
+        // Analisar propriedades
+        foreach (ref prop; node.properties)
+        {
+            string baseType = this.typeChecker.getTypeStringFromNative(prop.type.baseType);
+            prop.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+
+            if (prop.defaultValue !is null)
+            {
+                prop.defaultValue = this.analyzeNode(prop.defaultValue);
+            }
+        }
+
+        // Analisar métodos
+        ClassMethodDeclaration[] analyzedMethods;
+        foreach (method; node.methods)
+        {
+            this.pushScope(); // Escopo do método
+
+            // Adicionar 'isto' ao escopo
+            this.addSymbol("isto", SymbolInfo("isto", classType, false, true, method.loc));
+
+            // Adicionar propriedades ao escopo
+            foreach (prop; node.properties)
+            {
+                string propName = prop.name.value.get!string;
+                this.addSymbol(propName, SymbolInfo(propName, prop.type, true, true, prop.name.loc));
+            }
+
+            // Analisar argumentos do método
+            foreach (arg; method.args)
+            {
+                string argName = arg.id.value.get!string;
+                string baseType = this.typeChecker.getTypeStringFromNative(arg.type.baseType);
+                arg.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+                this.addSymbol(argName, SymbolInfo(argName, arg.type, true, false, arg.id.loc));
+            }
+
+            // Analisar corpo do método
+            Stmt[] analyzedBody;
+            foreach (stmt; method.body)
+            {
+                analyzedBody ~= this.analyzeNode(stmt);
+            }
+            method.body = analyzedBody;
+            method.context = this.currentScope();
+
+            analyzedMethods ~= method;
+            this.popScope();
+        }
+
+        node.methods = analyzedMethods;
+
+        // Analisar construtor se existir
+        if (node.construct !is null)
+        {
+            node.construct = cast(
+                ConstructorDeclaration) this.analyzeConstructorDeclaration(node.construct);
+        }
+
+        // Analisar destrutor se existir  
+        if (node.destruct !is null)
+        {
+            node.destruct = cast(
+                DestructorDeclaration) this.analyzeDestructorDeclaration(node.destruct);
+        }
+
+        node.type = classType;
+        return node;
+    }
+
+    ConstructorDeclaration analyzeConstructorDeclaration(ConstructorDeclaration node)
+    {
+        this.pushScope();
+
+        // Analisar argumentos
+        foreach (arg; node.args)
+        {
+            string argName = arg.id.value.get!string;
+            string baseType = this.typeChecker.getTypeStringFromNative(arg.type.baseType);
+            arg.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+            this.addSymbol(argName, SymbolInfo(argName, arg.type, true, false, arg.id.loc));
+        }
+
+        // Analisar corpo
+        Stmt[] analyzedBody;
+        foreach (stmt; node.body)
+        {
+            analyzedBody ~= this.analyzeNode(stmt);
+        }
+        node.body = analyzedBody;
+        node.context = this.currentScope();
+
+        this.popScope();
+        return node;
+    }
+
+    DestructorDeclaration analyzeDestructorDeclaration(DestructorDeclaration node)
+    {
+        this.pushScope();
+
+        // Analisar corpo
+        Stmt[] analyzedBody;
+        foreach (stmt; node.body)
+        {
+            analyzedBody ~= this.analyzeNode(stmt);
+        }
+        node.body = analyzedBody;
+        node.context = this.currentScope();
+
+        this.popScope();
+        return node;
+    }
+
+    NewExpr analyzeNewExpr(NewExpr node)
+    {
+        string className = node.className.value.get!string;
+
+        if (!this.typeChecker.isValidClass(className))
+        {
+            throw new Exception(format("Classe '%s' não foi declarada.", className));
+        }
+
+        // Analisar argumentos
+        Stmt[] analyzedArgs;
+        foreach (arg; node.args)
+        {
+            analyzedArgs ~= this.analyzeNode(arg);
+        }
+        node.args = analyzedArgs;
+
+        // O tipo será o da classe
+        node.type = createClassType(className);
+
+        return node;
+    }
+
+    ThisExpr analyzeThisExpr(ThisExpr node)
+    {
+        if (this.currentClassName == "")
+        {
+            throw new Exception("'isto' só pode ser usado dentro de métodos de classe.");
+        }
+        node.type = createClassType(this.currentClassName);
+        return node;
+    }
+
+    ImportStatement analyzeImportStatement(ImportStatement node)
+    {
+        // TODO: suporte para aliases
+        // TODO: precisa validar qual tipo de exportação é
+        this.importedModules[node.from] = true; // ativa a importação do modulo
+        if (node.targets.length > 0)
+        {
+            foreach (Identifier id; node.targets)
+            {
+                // TODO: deve verificar se o ID da importação existe
+                string _id = id.value.get!string;
+                this.availableStdFunctions[_id] = this.stdLibs[node.from].functions[_id];
+            }
+        }
+        else
+        {
+            StdLibFunction[string] fns = this.stdLibs[node.from].functions;
+            foreach (StdLibFunction fn; fns)
+            {
+                this.availableStdFunctions[fn.name] = fn;
+            }
+        }
+        return node;
+    }
+
     MemberCallExpr analyzeMemberCallExpr(MemberCallExpr node)
     {
         // Analisa o objeto à esquerda do ponto
         node.object = this.analyzeNode(node.object);
+
+        if (node.object.type.baseType == TypesNative.CLASS)
+        {
+            string className = node.object.type.className;
+            // string memberName = node.member.value.get!string;
+
+            // Verificar se a propriedade/método existe na classe
+            if (!this.typeChecker.isValidClass(className))
+                throw new Exception(format("Classe '%s' não encontrada.", className));
+
+            // TODO: Implementar verificação de membros da classe
+        }
 
         // Analisa o membro (já deve ser um Identifier)
         // node.member = cast(Identifier) this.analyzeNode(node.member);
@@ -278,7 +486,6 @@ private:
 
         if (node.op == "++" || node.op == "--")
         {
-            writeln(node.operand);
             if (node.operand.kind != NodeType.Identifier)
             {
                 throw new Exception("Operadores '++' e '--' só podem ser aplicados a variáveis.");
@@ -911,6 +1118,7 @@ private:
 
         string baseType = this.typeChecker.getTypeStringFromNative(analyzedValue.type.baseType);
         node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
+        node.type.className = analyzedValue.type.className;
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
 
         return node;

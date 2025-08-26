@@ -1,3 +1,5 @@
+importar "io"
+
 var pesoInicial1, pesoInicial2, entrada1, entrada2, erro = 0.3, 0.4, 1, 1, 1
 var resultadoEsperado: inteiro;
 enquanto (erro != 0){

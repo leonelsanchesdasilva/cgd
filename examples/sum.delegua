@@ -1,3 +1,5 @@
+importar "io"
+
 função ret1(x: inteiro): inteiro {
     retorna x
 }

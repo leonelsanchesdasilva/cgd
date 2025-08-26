@@ -1,0 +1,5 @@
+// importar "io"
+importar { escreva, escrevaln } de "io"
+
+escreva("Sucesso")
+escrevaln("!")
