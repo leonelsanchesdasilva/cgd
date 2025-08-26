@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" width="150" alt="cgd logo"/>
+  <img src="docs/assets/logo.png" width="150" alt="cgd logo"/>
 </p>
 
 [![Versão](https://img.shields.io/badge/versão-v0.0.4-blue.svg)](https://github.com/fernandothedev/cgd)
