@@ -11,6 +11,7 @@ struct FTypeInfo
     bool isPointer;
     bool isStruct;
     ulong pointerLevel;
+    bool isRef;
     string className;
 }
 
@@ -46,6 +47,19 @@ TypesNative stringToTypesNative(string typeStr)
     }
 }
 
+FTypeInfo createTypeInfoRef(string baseType, bool s = false)
+{
+    return FTypeInfo(
+        stringToTypesNative(baseType),
+        false,
+        0,
+        false,
+        s,
+        0,
+        true
+    );
+}
+
 FTypeInfo createTypeInfo(string baseType, bool s = false)
 {
     return FTypeInfo(
@@ -54,7 +68,8 @@ FTypeInfo createTypeInfo(string baseType, bool s = false)
         0,
         false,
         s,
-        0
+        0,
+        false
     );
 }
 
@@ -66,7 +81,8 @@ FTypeInfo createTypeInfo(TypesNative baseType, bool s = false)
         0,
         false,
         s,
-        0
+        0,
+        false
     );
 }
 
@@ -78,6 +94,19 @@ FTypeInfo createClassType(string className)
     return info;
 }
 
+FTypeInfo createArrayTypeRef(TypesNative baseType, ulong dimensions = 1, bool s = false)
+{
+    return FTypeInfo(
+        baseType,
+        true,
+        dimensions,
+        false,
+        s,
+        0,
+        true
+    );
+}
+
 FTypeInfo createArrayType(TypesNative baseType, ulong dimensions = 1, bool s = false)
 {
     return FTypeInfo(
@@ -86,7 +115,8 @@ FTypeInfo createArrayType(TypesNative baseType, ulong dimensions = 1, bool s = f
         dimensions,
         false,
         s,
-        0
+        0,
+        false
     );
 }
 
@@ -98,6 +128,7 @@ FTypeInfo createPointerType(TypesNative baseType, ulong pointerLevel, bool s = f
         0,
         true,
         s,
-        pointerLevel
+        pointerLevel,
+        false
     );
 }

@@ -1,5 +1,6 @@
 module middle.primitives;
 
+import std.stdio;
 import std.format;
 import frontend.values;
 import frontend.parser.ftype_info;
@@ -37,6 +38,8 @@ struct PrimitiveProperty
         string args_;
         for (long i; i < args.length; i++)
         {
+            if (args[i].isRef)
+                args_ ~= "ref ";
             if (args[i].isArray)
                 args_ ~= cast(string) args[i].baseType ~ "[]";
             else
@@ -91,7 +94,11 @@ public:
         // Vetores
         PrimitiveProperty[string] arr_properties;
         arr_properties["tamanho"] = PrimitiveProperty("tamanho", createTypeInfo("long"), "array_tamanho", [
-                createArrayType(TypesNative.ID)
+                createArrayType(TypesNative.T)
+            ], 1);
+        arr_properties["adicionar"] = PrimitiveProperty("adicionar", createTypeInfo("void"), "array_adicionar", [
+                createArrayTypeRef(TypesNative.T),
+                createTypeInfo("string"),
             ], 1);
         Primitive arr = Primitive("array", arr_properties);
         primitives["array"] = arr;

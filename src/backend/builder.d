@@ -265,9 +265,7 @@ private:
 
     Expression genArrayLiteral(ArrayLiteral node)
     {
-        writeln(node.elements);
         Expression[] elements = node.elements.map!(x => generate(x).get!Expression).array;
-        writeln(elements);
         return new ArrayLiteralExpression(new Type(TypeKind.Array, cast(string) node.type.baseType, this.getType(
                 node.type)), elements);
     }
@@ -608,6 +606,8 @@ private:
         {
             fn = semantic.primitive.get("array")
                 .properties[node.member.value.get!string];
+            if (fn.args[0].isRef)
+                node.object.type.isRef = true;
             fn.args[0] = node.object.type; // atualiza o primeiro argumento pro tipo atual
             // fn.args[0].baseType = TypesNative.T;
         }

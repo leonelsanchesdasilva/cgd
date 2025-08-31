@@ -1,0 +1,6 @@
+importar { escrevaln } de "io"
+
+var vetor: texto[] = ["Coder", "Forte"]
+vetor.adicionar("Fernando")
+
+escrevaln(vetor)
