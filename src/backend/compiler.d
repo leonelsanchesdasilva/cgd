@@ -111,8 +111,9 @@ private:
     string[] collectStdTypeFiles()
     {
         string[] files;
+        string stdTypesPath = stdlibPath ~ "types/";
 
-        if (!exists(stdTypesPath) || !isDir(stdTypesPath))
+        if (!exists(stdTypesPath))
         {
             writefln("⚠️  Diretório '%s' não encontrado", stdTypesPath);
             return files;

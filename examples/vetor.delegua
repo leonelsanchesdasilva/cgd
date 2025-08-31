@@ -1,0 +1,4 @@
+importar "io"
+
+var vetor: inteiro[] = [69]
+escrevaln(vetor)

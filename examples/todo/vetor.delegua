@@ -1,5 +1,0 @@
-importar "io"
-
-var array: inteiro[] = [[69], [1]]
-var i = 0
-escrevaln(array[i + 1])

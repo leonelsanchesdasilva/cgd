@@ -111,14 +111,9 @@ private:
                 return this.parseCallExpression();
             if (this.peek().kind == TokenType.EQUALS)
                 return this.parseAssignmentDeclaration();
-
             auto identifier = new Identifier(token.value.get!string, token.loc);
-
             if (this.peek().kind == TokenType.DOT)
-            {
                 return this.parseMemberCallExpression(identifier);
-            }
-
             return identifier;
 
         case TokenType.BIT_NOT:
@@ -144,11 +139,43 @@ private:
             Stmt operand = this.parseExpression(Precedence.POSTFIX);
             return new UnaryExpr("--", operand, this.makeLoc(token.loc, operand.loc), false);
 
+        case TokenType.LBRACKET:
+            return this.parseArrayLiteral();
+
         default:
             error.addError(Diagnostic("Nenhuma função de análise de prefixo para isso.", token
                     .loc));
             throw new Exception("No prefix parse function for " ~ to!string(token.kind));
         }
+    }
+
+    Stmt parseArrayLiteral()
+    {
+        Loc start = this.previous().loc;
+        Stmt[] elements;
+        Tuple!(bool, FTypeInfo) type = Tuple!(bool, FTypeInfo)(false, createTypeInfo("void"));
+        while (this.peek().kind != TokenType.RBRACKET && !this.isAtEnd())
+        {
+            // primeiro argumento
+            elements ~= this.parseExpression(Precedence.LOWEST);
+            if (!type[0])
+            {
+                type = tuple(true, elements[0].type);
+            }
+            else if (elements[$ - 1].type.baseType != type[1].baseType)
+            {
+                // Erro
+                this.error.addError(Diagnostic(format("O vetor foi declarado com tipo '%s'.", cast(
+                        string) type[1]
+                        .baseType), start));
+                throw new Exception(format("O vetor foi declarado com tipo '%s'.", cast(string) type[1]
+                        .baseType));
+            }
+            this.match([TokenType.COMMA]);
+        }
+        Loc end = this.consume(TokenType.RBRACKET, "Esperado ']' após a declaração do vetor.")
+            .loc;
+        return new ArrayLiteral(elements, type[1], this.makeLoc(start, end));
     }
 
     Stmt parseNewExpression()

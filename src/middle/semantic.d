@@ -183,6 +183,7 @@ private:
         case NodeType.FloatLiteral:
         case NodeType.NullLiteral:
         case NodeType.BoolLiteral:
+        case NodeType.ArrayLiteral:
             analyzedNode = node;
             string baseType = this.typeChecker.getTypeStringFromNative(analyzedNode.type.baseType);
             analyzedNode.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
@@ -1122,9 +1123,12 @@ private:
         Stmt analyzedValue = this.analyzeNode(node.value.get!Stmt);
         node.value = analyzedValue;
 
+        // TODO: validar os tipos
+
         string baseType = this.typeChecker.getTypeStringFromNative(analyzedValue.type.baseType);
         node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
         node.type.className = analyzedValue.type.className;
+        node.type.isArray = analyzedValue.type.isArray;
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
 
         return node;

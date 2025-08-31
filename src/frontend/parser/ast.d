@@ -42,6 +42,7 @@ enum NodeType
     StringLiteral,
     NullLiteral,
     BoolLiteral,
+    ArrayLiteral,
 
     DereferenceExpr,
     AddressOfExpr,
@@ -140,6 +141,19 @@ class StringLiteral : Stmt
         this.kind = NodeType.StringLiteral;
         this.type = createTypeInfo(TypesNative.STRING);
         this.value = value;
+        this.loc = loc;
+    }
+}
+
+class ArrayLiteral : Stmt
+{
+    Stmt[] elements;
+    this(Stmt[] elements, FTypeInfo type, Loc loc)
+    {
+        this.kind = NodeType.ArrayLiteral;
+        this.type = type;
+        this.elements = elements;
+        this.value = null;
         this.loc = loc;
     }
 }

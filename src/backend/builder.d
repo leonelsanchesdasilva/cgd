@@ -5,6 +5,8 @@ import std.exception : enforce;
 import std.format;
 import std.conv;
 import std.variant;
+import std.algorithm;
+import std.array;
 import frontend.parser.ftype_info;
 import frontend.parser.ast;
 import frontend.parser.ast_utils;
@@ -75,7 +77,7 @@ private:
             writeln(t);
             if (t.className in classTypes)
             {
-                result = Type(TypeKind.Custom, t.className);
+                result = new Type(TypeKind.Custom, t.className);
             }
             else
             {
@@ -212,6 +214,8 @@ private:
             return GenerationResult(genBoolLiteral(cast(BoolLiteral) node));
         case NodeType.NullLiteral:
             return GenerationResult(genNullLiteral(cast(NullLiteral) node));
+        case NodeType.ArrayLiteral:
+            return GenerationResult(genArrayLiteral(cast(ArrayLiteral) node));
 
             // Identificadores
         case NodeType.Identifier:
@@ -254,7 +258,13 @@ private:
         return result.get!Expression;
     }
 
-    // Novos métodos para classes
+    Expression genArrayLiteral(ArrayLiteral node)
+    {
+        Expression[] elements = node.elements.map!(x => generate(x).get!Expression).array;
+        return new ArrayLiteralExpression(new Type(TypeKind.Array, cast(string) node.type.baseType, this.getType(
+                node.type)), elements);
+    }
+
     Statement genClassDeclaration(ClassDeclaration node)
     {
         auto className = node.id.value.get!string;
@@ -332,7 +342,7 @@ private:
         }
 
         auto constructor = new Method(
-            Type(TypeKind.Void),
+            new Type(TypeKind.Void),
             "this",
             params,
             false,
@@ -377,7 +387,7 @@ private:
     Method genDestructorMethod(DestructorDeclaration node)
     {
         auto destructor = new Method(
-            Type(TypeKind.Void),
+            new Type(TypeKind.Void),
             "~this",
             [],
             false,
@@ -499,7 +509,7 @@ private:
             args ~= asExpression(generate(arg));
         }
 
-        auto classType = Type(TypeKind.Custom, className);
+        auto classType = new Type(TypeKind.Custom, className);
         return new NewExpression(classType, args);
     }
 
@@ -510,7 +520,7 @@ private:
             throw new Exception("'isto' usado fora de uma classe");
         }
 
-        auto classType = Type(TypeKind.Custom, currentClass.name);
+        auto classType = new Type(TypeKind.Custom, currentClass.name);
 
         return new VariableExpression(classType, "this");
     }
@@ -1101,7 +1111,7 @@ private:
                         if (abs(*floatVal - 0.5f) < 1e-6f)
                         {
                             // Retornar sqrt diretamente com o tipo correto
-                            auto doubleType = Type(TypeKind.Float64, "double");
+                            auto doubleType = new Type(TypeKind.Float64, "double");
                             return new CallExpression(doubleType, "sqrt", [
                                     new CastExpression(doubleType, leftExpr)
                                 ]);
@@ -1127,7 +1137,7 @@ private:
                     }
                 }
 
-                auto doubleType = Type(TypeKind.Float64, "double");
+                auto doubleType = new Type(TypeKind.Float64, "double");
                 return new CallExpression(doubleType, "pow", [
                         new CastExpression(doubleType, leftExpr),
                         new CastExpression(doubleType, rightExpr)

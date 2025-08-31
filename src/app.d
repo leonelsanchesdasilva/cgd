@@ -276,7 +276,7 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 
 		if (comando == "compilar")
 		{
-			Compiler compiler = new Compiler(builder, nomeArquivo ~ ".d", arquivoSaida, STDLIB_DIR, STDTYPE_DIR);
+			Compiler compiler = new Compiler(builder, nomeArquivo ~ ".d", arquivoSaida, STDLIB_DIR);
 			compiler.compile();
 
 			if (verboso)
