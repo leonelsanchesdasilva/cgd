@@ -10,6 +10,7 @@ enum TypesNative : string
     VOID = "void",
     CHAR = "char",
     NULL = "null",
-    ID = "auto", // Para identificadores (tipo ainda não conhecido)
-    CLASS = "class" // Novo tipo para classes
+    ID = "auto",
+    CLASS = "class",
+    T = "T"
 }

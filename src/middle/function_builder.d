@@ -37,11 +37,11 @@ class FunctionBuilder
     FunctionBuilder returns(FTypeInfo type)
     {
         this.func.returnType = type;
-        this.func.targetType = this.typeChecker.mapToDType(type.baseType);
+        this.func.targetType = createTypeInfo(this.typeChecker.mapToDType(type.baseType));
         return this;
     }
 
-    FunctionBuilder withParams(string[] params...)
+    FunctionBuilder withParams(FTypeInfo[] params...)
     {
         this.func.params = params.dup;
         return this;
@@ -89,115 +89,9 @@ class FunctionBuilder
         return this;
     }
 
-    FunctionBuilder customTargetType(string targetType)
+    FunctionBuilder customTargetType(FTypeInfo targetType)
     {
         this.func.targetType = targetType;
-        return this;
-    }
-
-    FunctionBuilder generateDExtern()
-    {
-        if (this.func.ir.length > 0)
-            return this; // already exists
-
-        string fnName = this.func.targetName.length > 0 ?
-            this.func.targetName : this.func.name;
-
-        string[] paramDecls;
-
-        foreach (i, p; this.func.params)
-        {
-            string dType = this.typeChecker.mapToDType(p);
-            paramDecls ~= dType ~ " param" ~ to!string(i);
-        }
-
-        string returnType = this.typeChecker.mapToDType(this.func.targetType);
-        string paramList = paramDecls.join(", ");
-
-        if (this.func.isVariadic)
-        {
-            paramList ~= paramList.length > 0 ? ", ..." : "...";
-        }
-
-        // Gerar declaração extern
-        this.func.ir = "extern(" ~ this.func.linkage ~ ") " ~
-            returnType ~ " " ~ fnName ~ "(" ~ paramList ~ ");";
-
-        return this;
-    }
-
-    FunctionBuilder generateDExternWithLinkage(string linkage = "D")
-    {
-        if (this.func.ir.length > 0)
-            return this; // already exists
-
-        string fnName = this.func.targetName.length > 0 ?
-            this.func.targetName : this.func.name;
-
-        string[] paramDecls;
-
-        foreach (i, p; this.func.params)
-        {
-            string dType = this.typeChecker.mapToDType(p);
-            paramDecls ~= dType ~ " param" ~ to!string(i);
-        }
-
-        string returnType = this.typeChecker.mapToDType(this.func.targetType);
-        string paramList = paramDecls.join(", ");
-
-        if (this.func.isVariadic)
-        {
-            paramList ~= paramList.length > 0 ? ", ..." : "...";
-        }
-
-        // Gerar com linkage específica
-        this.func.ir = "extern(" ~ linkage ~ ") " ~
-            returnType ~ " " ~ fnName ~ "(" ~ paramList ~ ");";
-
-        return this;
-    }
-
-    FunctionBuilder generateDExternWithAttributes()
-    {
-        if (this.func.ir.length > 0)
-            return this; // already exists
-
-        string fnName = this.func.targetName.length > 0 ?
-            this.func.targetName : this.func.name;
-
-        string[] paramDecls;
-
-        foreach (i, p; this.func.params)
-        {
-            string dType = this.typeChecker.mapToDType(p);
-            paramDecls ~= dType ~ " param" ~ to!string(i);
-        }
-
-        string returnType = this.typeChecker.mapToDType(this.func.targetType);
-        string paramList = paramDecls.join(", ");
-
-        if (this.func.isVariadic)
-        {
-            paramList ~= paramList.length > 0 ? ", ..." : "...";
-        }
-
-        // Adicionar atributos baseados no tipo de função
-        string[] attributes;
-        if (this.func.isNoGC)
-            attributes ~= "@nogc";
-        if (this.func.isSafe)
-            attributes ~= "@safe";
-        if (this.func.isNoThrow)
-            attributes ~= "nothrow";
-        if (this.func.isPure)
-            attributes ~= "pure";
-
-        string attributeStr = attributes.length > 0 ?
-            attributes.join(" ") ~ " " : "";
-
-        this.func.ir = attributeStr ~ "extern(" ~ this.func.linkage ~ ") " ~
-            returnType ~ " " ~ fnName ~ "(" ~ paramList ~ ");";
-
         return this;
     }
 
@@ -213,11 +107,11 @@ class FunctionBuilder
 
         foreach (i, p; this.func.params)
         {
-            string dType = this.typeChecker.mapToDType(p);
+            string dType = this.typeChecker.mapToDType(p.baseType);
             paramDecls ~= dType ~ " param" ~ to!string(i);
         }
 
-        string returnType = this.typeChecker.mapToDType(this.func.targetType);
+        string returnType = this.typeChecker.mapToDType(this.func.targetType.baseType);
         string paramList = paramDecls.join(", ");
 
         if (this.func.isVariadic)
@@ -233,65 +127,6 @@ class FunctionBuilder
         }
 
         this.func.ir = pragmaStr ~ "extern(" ~ this.func.linkage ~ ") " ~
-            returnType ~ " " ~ fnName ~ "(" ~ paramList ~ ");";
-
-        return this;
-    }
-
-    FunctionBuilder generateDExternComplete()
-    {
-        if (this.func.ir.length > 0)
-            return this; // already exists
-
-        string fnName = this.func.targetName.length > 0 ?
-            this.func.targetName : this.func.name;
-
-        string[] paramDecls;
-
-        foreach (i, p; this.func.params)
-        {
-            string dType = this.typeChecker.mapToDType(p);
-            paramDecls ~= dType ~ " param" ~ to!string(i);
-        }
-
-        string returnType = this.typeChecker.mapToDType(this.func.targetType);
-        string paramList = paramDecls.join(", ");
-
-        if (this.func.isVariadic)
-        {
-            paramList ~= paramList.length > 0 ? ", ..." : "...";
-        }
-
-        // Pragma lib
-        string pragmaStr = "";
-        if (this.func.libraryName.length > 0)
-        {
-            pragmaStr = "pragma(mangle, \"" ~ this.func.libraryName ~ "\")\n";
-        }
-
-        // Atributos
-        string[] attributes;
-        if (this.func.isNoGC)
-            attributes ~= "@nogc";
-        if (this.func.isSafe)
-            attributes ~= "@safe";
-        if (this.func.isNoThrow)
-            attributes ~= "nothrow";
-        if (this.func.isPure)
-            attributes ~= "pure";
-
-        string attributeStr = attributes.length > 0 ?
-            attributes.join(" ") ~ " " : "";
-
-        // Documentação
-        string docStr = "";
-        if (this.func.documentation.length > 0)
-        {
-            docStr = "/**\n * " ~ this.func.documentation ~ "\n */\n";
-        }
-
-        this.func.ir = docStr ~ pragmaStr ~ attributeStr ~
-            "extern(" ~ this.func.linkage ~ ") " ~
             returnType ~ " " ~ fnName ~ "(" ~ paramList ~ ");";
 
         return this;
@@ -328,19 +163,7 @@ class FunctionBuilder
 
     FunctionBuilder generate(ExternStrategy strategy = ExternStrategy.WithLinkage)
     {
-        switch (strategy)
-        {
-        case ExternStrategy.WithLinkage:
-            return generateDExternWithLinkage(this.func.linkage);
-        case ExternStrategy.WithAttributes:
-            return generateDExternWithAttributes();
-        case ExternStrategy.WithPragma:
-            return generateDExternWithPragma();
-        case ExternStrategy.Complete:
-            return generateDExternComplete();
-        default:
-            return generateDExternComplete();
-        }
+        return generateDExternWithPragma();
     }
 
     StdLibModuleBuilder done()

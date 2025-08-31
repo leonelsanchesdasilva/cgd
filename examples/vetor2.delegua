@@ -1,0 +1,8 @@
+importar "io"
+
+funcao olá(): texto[]
+{
+    retorna "Fernando Cabral".substituir("Cabral", "Dev").dividir(" ")
+}
+
+escrevaln(olá().tamanho)

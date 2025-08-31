@@ -3,6 +3,7 @@ docs.json
 __dummy.html
 /cgd
 cgd.so
+cgd
 cgd.dylib
 cgd.dll
 cgd.a

@@ -162,7 +162,7 @@ private:
 
         command ~= "-of=" ~ this.arquivoSaida;
 
-        // writeln("Comando: ", command);
+        writeln("Comando: ", command);
 
         return command;
     }

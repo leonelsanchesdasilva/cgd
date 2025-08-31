@@ -695,7 +695,7 @@ class ClassMethodDeclaration : Stmt
 
 class ClassDeclaration : Stmt
 {
-    Identifier id; // ADICIONAR ESTA LINHA
+    Identifier id;
     ClassProperty[] properties;
     ClassMethodDeclaration[] methods;
     ConstructorDeclaration construct; // método construtor

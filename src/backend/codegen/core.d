@@ -140,10 +140,6 @@ class LiteralExpression : Expression
 
     override string generateD()
     {
-        if (type.kind == TypeKind.String)
-        {
-            return `"` ~ value ~ `"`;
-        }
         return value;
     }
 }
