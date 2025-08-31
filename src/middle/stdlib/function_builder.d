@@ -1,10 +1,10 @@
-module middle.function_builder;
+module middle.stdlib.function_builder;
 
 import std.string;
 import std.array;
 import std.conv;
 import std.algorithm;
-import middle.std_lib_module_builder;
+import middle.stdlib.std_lib_module_builder;
 import middle.type_checker;
 import frontend.parser.ftype_info;
 
@@ -28,6 +28,7 @@ class FunctionBuilder
         this.func.name = name;
         this.func.isStdLib = true;
         this.func.isVariadic = false;
+        this.func.opt = 0;
         this.func.params = [];
 
         this.moduleBuilder = moduleBuilder;
@@ -50,6 +51,12 @@ class FunctionBuilder
     FunctionBuilder variadic()
     {
         this.func.isVariadic = true;
+        return this;
+    }
+
+    FunctionBuilder opt(long n = 0)
+    {
+        this.func.opt = n;
         return this;
     }
 

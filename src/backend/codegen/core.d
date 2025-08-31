@@ -897,6 +897,27 @@ class IndexExpression : Expression
     }
 }
 
+// Expressão para atualizar o valor em um index de um array (arr[index] = x)
+class IndexExpressionAssignment : Expression
+{
+    Expression array;
+    Expression index;
+    Expression value;
+
+    this(Type type, Expression array, Expression index, Expression value)
+    {
+        super(type);
+        this.array = array;
+        this.index = index;
+        this.value = value;
+    }
+
+    override string generateD()
+    {
+        return array.generateD() ~ "[" ~ index.generateD() ~ "]" ~ " = " ~ value.generateD();
+    }
+}
+
 // Expressão para casting (cast(Type)expr)
 class CastExpression : Expression
 {

@@ -1,4 +1,4 @@
-module middle.primitives;
+module middle.stdlib.primitives;
 
 import std.stdio;
 import std.format;

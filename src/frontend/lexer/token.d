@@ -185,7 +185,6 @@ shared static this()
     keywords["pegue"] = TokenType.PEGUE;
     keywords["retorna"] = TokenType.RETORNA;
     keywords["retorne"] = TokenType.RETORNA;
-    keywords["vazio"] = TokenType.VAZIO;
     keywords["debugger"] = TokenType.DEBUGGER;
     keywords["funcao"] = TokenType.FUNCAO;
     keywords["função"] = TokenType.FUNCAO;

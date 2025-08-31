@@ -12,8 +12,6 @@ importar "io"
 
 var x = 10 * 5
 var y = (10 << 2) + 10
-var z = "len"
 
 escrevaln(x)
 escrevaln(y)
-escrevaln(z.length)

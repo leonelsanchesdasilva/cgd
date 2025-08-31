@@ -1,4 +1,5 @@
-importar "io"
+importar { escrevaln } de "io"
 
-var vetor: inteiro[] = [69]
+var vetor: inteiro[] = [23]
+vetor[2 ** 0 - 1] = (vetor[2 ** 0 - 1] << 2) - vetor[2 ** 0 - 1];
 escrevaln(vetor)

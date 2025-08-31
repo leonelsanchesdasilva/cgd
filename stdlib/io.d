@@ -95,6 +95,11 @@ extern (D) void escreva(...)
             string value = va_arg!(string)(argptr);
             write(value);
         }
+        else if (ti == typeid(immutable(char)))
+        {
+            immutable(char) value = va_arg!(immutable(char))(argptr);
+            write(value);
+        }
         else if (ti == typeid(char[]))
         {
             char[] value = va_arg!(char[])(argptr);
@@ -223,6 +228,11 @@ extern (D) void escrevaln(...)
             string value = va_arg!(string)(argptr);
             write(value);
         }
+        else if (ti == typeid(immutable(char)))
+        {
+            immutable(char) value = va_arg!(immutable(char))(argptr);
+            write(value);
+        }
         else if (ti == typeid(char[]))
         {
             char[] value = va_arg!(char[])(argptr);
@@ -264,7 +274,7 @@ extern (D) void escrevaln(...)
 }
 
 pragma(mangle, "io_leia")
-extern (D) string leia(string prompt = "")
+extern (D) string leia(string prompt = "") // opt = 1
 {
     if (prompt.length > 0)
         write(prompt);

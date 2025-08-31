@@ -104,6 +104,7 @@ private:
         case "texto":
             return TypesNative.STRING;
         case "void":
+        case "vazio":
             return TypesNative.VOID;
         case "null":
         case "nulo":

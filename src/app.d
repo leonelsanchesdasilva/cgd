@@ -10,7 +10,7 @@ import frontend.lexer.token;
 import frontend.parser.parser;
 import frontend.parser.ast;
 import middle.semantic;
-import middle.constant_folding;
+import middle.optmizer.constant_folding;
 import backend.builder;
 import backend.compiler;
 import updater;

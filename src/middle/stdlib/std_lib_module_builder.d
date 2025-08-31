@@ -1,8 +1,8 @@
-module middle.std_lib_module_builder;
+module middle.stdlib.std_lib_module_builder;
 
 import std.string;
 import std.array;
-import middle.function_builder;
+import middle.stdlib.function_builder;
 import frontend.parser.ftype_info;
 
 struct StdLibFunction
@@ -11,6 +11,7 @@ struct StdLibFunction
     FTypeInfo returnType;
     FTypeInfo targetType;
     FTypeInfo[] params;
+    long opt; // numero de parametros opcionais
     bool isVariadic;
     string targetName;
     string ir;

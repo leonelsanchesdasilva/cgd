@@ -108,7 +108,7 @@ Iniciado: 11 de agosto de 2025
 - [ ] Otimizador
   - [X] Otimizações básicas (bitwise para multiplicação/divisão)
   - [ ] Dead code elimination
-  - [ ] Constant folding
+  - [X] Constant folding
 - [X] Gerador de código D
 - [X] Geração do binário
 - [X] Tratamento de erros eficiente
@@ -170,10 +170,10 @@ Iniciado: 11 de agosto de 2025
 - [X] **io**
   - [X] `escrevaln` / `escreva`
   - [X] `leia` (input do usuário)
-- [ ] **math**
+- [X] **math**
   - [ ] Funções trigonométricas
   - [ ] Logaritmos e exponenciais
-  - [ ] Constantes matemáticas
+  - [X] Constantes matemáticas
 - [ ] **http**
   - [ ] Cliente HTTP básico
   - [ ] Servidor HTTP simples
