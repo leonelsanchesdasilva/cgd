@@ -1,0 +1,18 @@
+importar "io"
+
+classe Teste {
+    a(): Teste
+    {
+        escrevaln("A")
+        retorna isto
+    }
+
+    b(): Teste
+    {
+        escrevaln("B")
+        retorna isto
+    }
+}
+
+var teste = novo Teste()
+teste.a().b().a()

@@ -17,6 +17,7 @@ enum TokenType
     PARA, // para
     ESCOLHA, // escolha
     ENQUANTO, // enquanto
+    FAZER, // fazer
     PADRAO, // padrão/padrao
     SE, // se
     FALHAR, // falhar
@@ -171,6 +172,7 @@ shared static this()
     keywords["para"] = TokenType.PARA;
     keywords["escolha"] = TokenType.ESCOLHA;
     keywords["enquanto"] = TokenType.ENQUANTO;
+    keywords["fazer"] = TokenType.FAZER;
     keywords["padrao"] = TokenType.PADRAO;
     keywords["padrão"] = TokenType.PADRAO;
     keywords["se"] = TokenType.SE;

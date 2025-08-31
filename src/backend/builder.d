@@ -7,10 +7,12 @@ import std.conv;
 import std.variant;
 import frontend.parser.ftype_info;
 import frontend.parser.ast;
+import frontend.parser.ast_utils;
 import frontend.values;
 import middle.std_lib_module_builder : StdLibFunction;
 import backend.codegen.core;
 import middle.semantic;
+import middle.primitives;
 
 alias GenerationResult = Variant;
 
@@ -70,6 +72,7 @@ private:
             break;
         default:
             // Verificar se é um tipo de classe customizado
+            writeln(t);
             if (t.className in classTypes)
             {
                 result = Type(TypeKind.Custom, t.className);
@@ -181,6 +184,8 @@ private:
             return GenerationResult(genElseStatement(cast(ElseStatement) node));
         case NodeType.WhileStatement:
             return GenerationResult(genWhileStatement(cast(WhileStatement) node));
+        case NodeType.DoWhileStatement:
+            return GenerationResult(genDoWhileStatement(cast(DoWhileStatement) node));
         case NodeType.ForStatement:
             return GenerationResult(genForStatement(cast(ForStatement) node));
         case NodeType.AssignmentDeclaration:
@@ -595,6 +600,25 @@ private:
         else
         {
             // É acesso a propriedade/campo
+            // TODO: validar essa porra de forma geral
+
+            // TODO: validar essa porra que estou fazendo
+            // vamos ignorar argumentos por enquanto
+            GenerationResult obj = generate(node.object);
+            string type = typeInfoToString(node.object.type); // a esquerda do ponto
+            if (semantic.primitive.exists(type))
+            {
+                // vamos traduzir pra uma chamada de função
+                PrimitiveProperty fn = semantic.primitive.get(cast(string) node.object.type.baseType)
+                    .properties[node.member.value.get!string];
+
+                // vamos adicionar isso ao contexto
+                codegen.currentModule.addStdFunction(fn.generateD());
+
+                Expression[] args = [asExpression(obj)];
+                return new CallExpression(getType(node.object.type), fn.mangle, args);
+            }
+
             return new MemberAccessExpression(getType(node.type), objectExpr, memberName);
         }
     }
@@ -929,6 +953,20 @@ private:
 
         auto _for = new ForStatementCore(_init, cond, incr, new BlockStatement(body));
         return _for;
+    }
+
+    Statement genDoWhileStatement(DoWhileStatement node)
+    {
+        Expression cond = generate(node.cond).get!Expression;
+        Statement[] body = [];
+        foreach (Stmt stmt; node.body)
+        {
+            auto result = this.generate(stmt);
+            genBlock(result, body);
+        }
+
+        auto _while = new DoWhileStatementCore(cond, new BlockStatement(body));
+        return _while;
     }
 
     Statement genWhileStatement(WhileStatement node)
@@ -1305,9 +1343,7 @@ public:
 
         // importando as funções std para nosso contexto atual
         foreach (string name, StdLibFunction func; semantic.availableStdFunctions)
-        {
             this.globalScope[name] = Symbol(func.returnType, name, true);
-        }
     }
 
     void build()
@@ -1317,18 +1353,7 @@ public:
 
         // Adicionando as bibliotecas
         if (this.semantic.availableStdFunctions.length > 0)
-        {
-            // writeln("Adicionando bibliotecas.");
-            // writeln("Current Module: ", codegen.currentModule.name);
-            // writeln(codegen.currentModule.imports);
-            // writeln(codegen.currentModule.functions[0]);
-            // writeln(codegen.currentModule.globalStatements);
-            // writeln(codegen.currentModule.stdFunctions);
             foreach (string name, StdLibFunction fn; this.semantic.availableStdFunctions)
-            {
-                // writeln(fn.ir);
                 codegen.currentModule.addStdFunction(fn.ir);
-            }
-        }
     }
 }

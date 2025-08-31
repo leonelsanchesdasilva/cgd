@@ -30,6 +30,7 @@ enum NodeType
     ElseStatement,
     ForStatement,
     WhileStatement,
+    DoWhileStatement,
     SwitchStatement,
     CaseStatement,
     DefaultStatement,
@@ -532,6 +533,23 @@ class WhileStatement : Stmt
     }
 }
 
+class DoWhileStatement : Stmt
+{
+    // while cond body
+    Stmt cond;
+    Stmt[] body;
+
+    this(Stmt cond, Stmt[] body, Loc loc)
+    {
+        this.kind = NodeType.DoWhileStatement;
+        this.value = null;
+        this.cond = cond;
+        this.body = body;
+        this.loc = loc;
+        this.type = createTypeInfo(TypesNative.NULL);
+    }
+}
+
 class AssignmentDeclaration : Stmt
 {
     Identifier id;
@@ -548,7 +566,7 @@ class AssignmentDeclaration : Stmt
 
 class MemberCallExpr : Stmt
 {
-    Stmt object; // A expressão à esquerda do ponto
+    Stmt object; // A expressão à esquerda do ponto ("String".tamanho) -> "String"
     Identifier member; // O membro sendo chamado
     Stmt[] args; // Argumentos se for uma chamada de método
     bool isMethodCall; // true se for x.method(), false se for x.property

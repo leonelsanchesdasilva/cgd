@@ -16,6 +16,7 @@ NC='\033[0m'
 # Configurações
 REPO_URL="https://github.com/FernandoTheDev/cgd"
 INSTALL_DIR="$HOME/.local/bin"
+INSTALL_STDLIB_DIR="$HOME/.cgd/stdlib"
 SOURCE_DIR="/tmp/cgd-install"
 BINARY_NAME="cgd"
 
@@ -187,6 +188,7 @@ compile_from_source() {
     
     # Verificar se o executável foi criado
     local executable=""
+    local stdlib="stdlib"
     if [ -f "cgd" ]; then
         executable="cgd"
     elif [ -f "bin/cgd" ]; then
@@ -205,7 +207,11 @@ compile_from_source() {
     
     # Criar diretório de instalação e mover executável
     mkdir -p "$INSTALL_DIR"
+    mkdir -p "$INSTALL_STDLIB_DIR"
+    
     cp "$executable" "$INSTALL_DIR/$BINARY_NAME"
+    cp -rf "$stdlib" "$INSTALL_STDLIB_DIR/"
+    
     chmod +x "$INSTALL_DIR/$BINARY_NAME"
     
     print_success "Compilação e instalação concluídas!"

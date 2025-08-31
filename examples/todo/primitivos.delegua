@@ -1,2 +1,0 @@
-var nome = "Fernando"
-escrevaln("Tamanho do nome: ", nome.length)

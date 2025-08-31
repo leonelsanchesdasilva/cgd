@@ -5,11 +5,13 @@ import std.format;
 import std.file;
 import std.path;
 import std.process;
+import std.array : split;
 import std.string;
 import std.array;
 import backend.codegen.core;
 import backend.builder;
 import middle.semantic;
+import middle.primitives;
 import middle.std_lib_module_builder;
 
 class Compiler
@@ -19,28 +21,22 @@ private:
     Semantic semantic;
     string filename;
     string arquivoSaida;
-    // Futuramente irá alterar para usar um caminho fixo
-    // Ficaria em $HOME/.cgd/stdlib
-    string stdlibPath = "stdlib"; // Diretório das bibliotecas padrão
+    string stdlibPath;
 
 public:
-    this(Builder builder, string filename, string arquivoSaida)
+    this(Builder builder, string filename, string arquivoSaida, string stdlibpath)
     {
         this.builder = builder;
         this.semantic = builder.semantic;
         this.filename = filename;
         this.arquivoSaida = arquivoSaida;
+        this.stdlibPath = stdlibpath;
     }
 
     void compile()
     {
-        writeln("🔨 Iniciando compilação...");
-
         CodeGenerator codegen = this.builder.codegen;
-        writeln("⚙️  Gerando código...");
         codegen.saveToFile(filename);
-        writefln("💾 Código salvo em: '%s'", filename);
-
         compileWithLDC();
     }
 
@@ -48,39 +44,18 @@ private:
     void removeTempFiles()
     {
         if (exists(this.filename))
-        {
-            writefln("🗑️  Removendo código salvo em: '%s'", this.filename);
             remove(this.filename);
-        }
-
-        import std.array : split;
 
         string oFile = this.filename.split(".")[0] ~ ".o";
         if (exists(oFile))
-        {
-            writefln("🗑️  Removendo arquivo temporário: '%s'", oFile);
             remove(oFile);
-        }
     }
 
     void compileWithLDC()
     {
-        writeln("🔧 Compilando com LDC...");
-
         string[] stdlibFiles = collectStdlibFiles();
-
-        if (stdlibFiles.length > 0)
-        {
-            writeln("🔗 Bibliotecas a serem linkadas:");
-            foreach (file; stdlibFiles)
-            {
-                writefln("   📦 %s", file);
-            }
-        }
-
-        string[] ldcCommand = buildLDCCommand(stdlibFiles);
-
-        writefln("🚀 Executando: %s", ldcCommand.join(" "));
+        string[] stdTypeFiles = collectStdTypeFiles();
+        string[] ldcCommand = buildLDCCommand(stdlibFiles, stdTypeFiles);
 
         auto result = execute(ldcCommand);
 
@@ -132,7 +107,35 @@ private:
         return files;
     }
 
-    string[] buildLDCCommand(string[] stdlibFiles)
+    // TODO: Evitar essa cópia de código refatorando com o collectStdlibFiles
+    string[] collectStdTypeFiles()
+    {
+        string[] files;
+
+        if (!exists(stdTypesPath) || !isDir(stdTypesPath))
+        {
+            writefln("⚠️  Diretório '%s' não encontrado", stdTypesPath);
+            return files;
+        }
+
+        foreach (string typeName, Primitive primitive; this.semantic.primitive.get())
+        {
+            string stdTypeFile = buildPath(stdlibPath ~ "types/", typeName ~ ".d");
+
+            if (exists(stdTypeFile) && isFile(stdTypeFile))
+            {
+                files ~= stdTypeFile;
+            }
+            else
+            {
+                writefln("⚠️  Biblioteca '%s.d' não encontrada em '%s'", typeName, stdTypesPath);
+            }
+        }
+
+        return files;
+    }
+
+    string[] buildLDCCommand(string[] stdlibFiles, string[] stdTypeFiles)
     {
         string[] command;
 
@@ -144,16 +147,21 @@ private:
 
         // Arquivos da stdlib
         command ~= stdlibFiles;
-
-        command ~= "-O3";
-
-        command ~= "--flto=full";
-
-        // command ~= "--mcpu=native";
+        command ~= stdTypeFiles;
 
         command ~= "--release";
 
+        command ~= "--Oz";
+
+        command ~= "--ffast-math";
+
+        command ~= "--linkonce-templates";
+
+        command ~= "--flto=full";
+
         command ~= "-of=" ~ this.arquivoSaida;
+
+        // writeln("Comando: ", command);
 
         return command;
     }
@@ -163,7 +171,8 @@ private:
         writeln("🔧 Compilando com LDC (modo verbose)...");
 
         string[] stdlibFiles = collectStdlibFiles();
-        string[] command = buildLDCCommand(stdlibFiles);
+        string[] stdTypeFiles = collectStdTypeFiles();
+        string[] command = buildLDCCommand(stdlibFiles, stdTypeFiles);
 
         // Adicionar flags de debug/verbose
         command ~= "-v"; // Verbose

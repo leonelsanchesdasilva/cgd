@@ -1,0 +1,14 @@
+importar "io"
+
+classe Usuario
+{
+    nome: texto;
+
+    construtor(nome: texto = "...")
+    {
+        isto.nome = nome;
+    }
+}
+
+var u = novo Usuario("Fefe")
+escreva(u.nome)

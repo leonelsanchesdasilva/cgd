@@ -341,6 +341,26 @@ class ElseStatementCore : Statement
     }
 }
 
+class DoWhileStatementCore : Statement
+{
+    Expression condition;
+    Statement body;
+
+    this(Expression condition, Statement body)
+    {
+        this.condition = condition;
+        this.body = body;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        string result = indent(indentLevel) ~ "do\n";
+        result ~= body.generateD(indentLevel);
+        result ~= " while (" ~ condition.generateD() ~ ");\n";
+        return result;
+    }
+}
+
 class WhileStatementCore : Statement
 {
     Expression condition;
