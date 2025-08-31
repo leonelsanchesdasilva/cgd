@@ -11,8 +11,8 @@ import std.array;
 import backend.codegen.core;
 import backend.builder;
 import middle.semantic;
-import middle.primitives;
-import middle.std_lib_module_builder;
+import middle.stdlib.primitives;
+import middle.stdlib.std_lib_module_builder;
 
 class Compiler
 {

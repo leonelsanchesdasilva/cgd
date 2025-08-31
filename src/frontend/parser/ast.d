@@ -53,6 +53,8 @@ enum NodeType
     MemberCallExpr,
     NewExpr,
     ThisExpr,
+    IndexExpr,
+    IndexExprAssignment
 }
 
 class Stmt
@@ -793,5 +795,33 @@ class ImportStatement : Stmt
         this.targets = targets;
         this.loc = loc;
         this.type = createTypeInfo("null");
+    }
+}
+
+class IndexExpr : Stmt
+{
+    Stmt left, index;
+    this(Stmt left, Stmt index, Loc loc)
+    {
+        this.kind = NodeType.IndexExpr;
+        this.left = left;
+        this.index = index;
+        this.type = left.type; // permite encadeamento
+        this.value = null;
+        this.loc = loc;
+    }
+}
+
+class IndexExprAssignment : Stmt
+{
+    Stmt left, index, value;
+    this(Stmt left, Stmt index, Stmt value, Loc loc)
+    {
+        this.kind = NodeType.IndexExprAssignment;
+        this.left = left;
+        this.index = index;
+        this.type = left.type; // permite encadeamento
+        this.value = value;
+        this.loc = loc;
     }
 }

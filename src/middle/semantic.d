@@ -6,10 +6,10 @@ import std.conv;
 import std.format;
 import std.typecons : Nullable;
 import middle.semantic_symbol_info;
-import middle.function_builder;
-import middle.std_lib_module_builder;
+import middle.stdlib.function_builder;
+import middle.stdlib.std_lib_module_builder;
 import middle.type_checker;
-import middle.primitives;
+import middle.stdlib.primitives;
 import frontend.parser.ast;
 import frontend.values;
 import frontend.parser.ftype_info;
@@ -45,6 +45,16 @@ public:
             .libraryName("io_escreva")
             .generateDExternWithPragma()
             .done()
+
+            .defineFunction("leia")
+            .returns(createTypeInfo(TypesNative.NULL))
+            .customTargetType(createTypeInfo("string"))
+            .withParams(createTypeInfo("string"))
+            .libraryName("io_leia")
+            .opt(1)
+            .generateDExternWithPragma()
+            .done()
+
             .defineFunction("escrevaln")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
@@ -176,6 +186,12 @@ private:
         case NodeType.ThisExpr:
             analyzedNode = this.analyzeThisExpr(cast(ThisExpr) node);
             break;
+        case NodeType.IndexExpr:
+            analyzedNode = this.analyzeIndexExpr(cast(IndexExpr) node);
+            break;
+        case NodeType.IndexExprAssignment:
+            analyzedNode = this.analyzeIndexExprAssignment(cast(IndexExprAssignment) node);
+            break;
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -192,6 +208,32 @@ private:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
         return analyzedNode;
+    }
+
+    IndexExprAssignment analyzeIndexExprAssignment(IndexExprAssignment node)
+    {
+        // TODO: verificar se o left é um array e verificar acesso a um local inválido
+        node.left = this.analyzeNode(node.left);
+        node.index = this.analyzeNode(node.index);
+        node.value = this.analyzeNode(node.value);
+        node.type = node.left.type; // "Str"[0] -> str[str]
+
+        // TODO: validar isso
+        if (node.value.type != node.type)
+        {
+            //
+        }
+
+        return node;
+    }
+
+    IndexExpr analyzeIndexExpr(IndexExpr node)
+    {
+        // TODO: verificar se o left é um array e verificar acesso a um local inválido
+        node.left = this.analyzeNode(node.left);
+        node.index = this.analyzeNode(node.index);
+        node.type = node.left.type; // "Str"[0] -> str[str]
+        return node;
     }
 
     ClassDeclaration analyzeClassDeclaration(ClassDeclaration node)
@@ -894,6 +936,7 @@ private:
         bool isVariadic = false;
         FTypeInfo funcType;
         bool isStdFunction = false;
+        long opt = 0;
 
         if (userFunc)
         {
@@ -906,6 +949,7 @@ private:
         else if (stdFunc)
         {
             returnType = stdFunc.returnType;
+            opt = stdFunc.opt;
             stdExpectedParams = stdFunc.params;
             isVariadic = stdFunc.isVariadic;
             funcType = stdFunc.targetType;
@@ -916,11 +960,11 @@ private:
         size_t expectedArgCount = isStdFunction ? stdExpectedParams.length
             : userExpectedParams.length;
 
-        if (!isVariadic && node.args.length != expectedArgCount)
+        if (!isVariadic && node.args.length != expectedArgCount && node.args.length != expectedArgCount - opt)
         {
             throw new Exception(format(
-                    "A função '%s' espera %d argumentos, mas recebeu %d.",
-                    funcName, expectedArgCount, node.args.length
+                    "A função '%s' espera %d argumentos sendo %d' opcionais, mas recebeu %d.",
+                    funcName, expectedArgCount, opt, node.args.length
             ));
         }
 
@@ -1040,8 +1084,7 @@ private:
         FunctionParam[] params;
         foreach (FunctionArg arg; args)
         {
-            // writeln("PARAMS ", FunctionParam(arg.id.value.get!string, arg.type, to!string(
-            //         arg.type.baseType)));
+            // writeln("PARAMS ", FunctionParam(arg.id.value.get!string, arg.type));
             params ~= FunctionParam(arg.id.value.get!string, arg.type, arg.type);
         }
 
@@ -1078,7 +1121,7 @@ private:
             }
         }
 
-        if (t2 != "void" && !hasReturn)
+        if (returnType.baseType != TypesNative.VOID && !hasReturn)
         {
             this.error.addError(Diagnostic(format(
                     "A função esperava um retorno '%s', mas não foi encontrado qualquer tipo de retorno nela.", t2),
@@ -1089,7 +1132,6 @@ private:
         }
 
         node.args = args;
-        // writeln("T: ", node.args[0].type.baseType);
         node.body = analyzedBlock;
         node.type = returnType;
         node.context = this.currentScope();
@@ -1114,8 +1156,8 @@ private:
         {
             this.identifiersUsed[id] = true;
         }
-        node.type = symbol.type;
 
+        node.type = symbol.type;
         return node;
     }
 

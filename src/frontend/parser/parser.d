@@ -53,7 +53,11 @@ private:
         case TokenType.FLOAT:
             return new FloatLiteral(to!float(token.value.get!string), token.loc);
         case TokenType.STRING:
-            return new StringLiteral(token.value.get!string, token.loc);
+            auto literal = new StringLiteral(token.value.get!string, token.loc);
+            if (this.peek()
+                .kind == TokenType.LBRACKET)
+                return this.parseIndexExpr(literal);
+            return literal;
         case TokenType.TRUE:
             return new BoolLiteral(true, token.loc);
         case TokenType.FALSE:
@@ -112,6 +116,8 @@ private:
             if (this.peek().kind == TokenType.EQUALS)
                 return this.parseAssignmentDeclaration();
             auto identifier = new Identifier(token.value.get!string, token.loc);
+            if (this.peek().kind == TokenType.LBRACKET)
+                return this.parseIndexExpr(identifier);
             if (this.peek().kind == TokenType.DOT)
                 return this.parseMemberCallExpression(identifier);
             return identifier;
@@ -149,6 +155,23 @@ private:
         }
     }
 
+    Stmt parseIndexExpr(Stmt left)
+    {
+        Loc start = this.consume(TokenType.LBRACKET, "...").loc;
+        Stmt index = this.parseExpression(Precedence.LOWEST);
+        Loc end = this.consume(TokenType.RBRACKET, "Esperava-se ']' após o acesso ao indice.").loc;
+        Stmt indexExpr = new IndexExpr(left, index, this.makeLoc(start, end));
+        if (this.peek().kind == TokenType.LBRACKET) // encadeamento
+            return this.parseIndexExpr(indexExpr);
+        if (this.peek().kind == TokenType.EQUALS) // IndexExprAssignment
+        {
+            this.match([TokenType.EQUALS]); // consome
+            Stmt value = this.parseExpression(Precedence.LOWEST);
+            return new IndexExprAssignment(left, index, value, this.makeLoc(start, value.loc));
+        }
+        return indexExpr;
+    }
+
     Stmt parseArrayLiteral()
     {
         Loc start = this.previous().loc;
@@ -159,9 +182,7 @@ private:
             // primeiro argumento
             elements ~= this.parseExpression(Precedence.LOWEST);
             if (!type[0])
-            {
                 type = tuple(true, elements[0].type);
-            }
             else if (elements[$ - 1].type.baseType != type[1].baseType)
             {
                 // Erro
@@ -607,9 +628,15 @@ private:
     {
         Loc start = this.previous().loc;
         Stmt cond = this.parseExpression(Precedence.LOWEST);
+        Stmt[] body;
+
+        if (this.peek().kind != TokenType.LBRACE)
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+            return new WhileStatement(cond, body, start);
+        }
 
         this.consume(TokenType.LBRACE, "Esperava-se '{' após a condição do 'enquanto'.");
-        Stmt[] body;
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
         {
@@ -643,10 +670,15 @@ private:
 
         this.consume(TokenType.SEMICOLON, "Esperava-se ';' após a condição do 'para'.");
         Stmt expr = this.parseExpression(Precedence.LOWEST);
+        Stmt[] body;
+
+        if (this.peek().kind != TokenType.LBRACE)
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+            return new ForStatement(_init, cond, expr, body, start);
+        }
 
         this.consume(TokenType.LBRACE, "Esperava-se '{' após a expressão do 'para'.");
-
-        Stmt[] body;
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
         {
@@ -767,15 +799,44 @@ private:
         if (this.match([TokenType.COLON]))
         {
             Token[] fnTokens;
-            while (this.peek().kind != TokenType.LBRACE)
+            while (this.peek().kind != TokenType.LBRACE && this.peek().kind != TokenType.BIT_OR)
             {
+                // caiu em loop
+                if (fnTokens.length > 3)
+                {
+                    this.error.addError(Diagnostic("Tipo desconhecido.", fnTokens[0].loc));
+                    throw new Exception("Tipo desconhecido.");
+                }
                 fnTokens ~= this.advance();
             }
             returnType = new ParseType(fnTokens).parse();
         }
 
-        this.consume(TokenType.LBRACE, "Expect '{' before function body.");
+        // TODO: suportar funções template
+        // if (this.match([TokenType.SEMICOLON]))
+        // {
+
+        // }
+
         Stmt[] body;
+
+        if (this.match([TokenType.BIT_OR]))
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+            if (body[0].kind != NodeType.ReturnStatement)
+            {
+                // ERRRO
+                this.error.addError(Diagnostic("Essa sintaxe só está disponivel para retornos unicos.", body[0]
+                        .loc));
+                throw new Exception("Essa sintaxe só está disponivel para retornos unicos.");
+            }
+            Loc end = body[0].loc;
+            return new FunctionDeclaration(new Identifier(id.value.get!string, id.loc), args, body, returnType, this
+                    .makeLoc(
+                        start.loc, end));
+        }
+
+        this.consume(TokenType.LBRACE, "Expect '{' before function body.");
 
         while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
         {
@@ -840,7 +901,10 @@ private:
 
     Stmt parseReturnStatement()
     {
-        Stmt expr = this.parseExpression(Precedence.LOWEST);
+        Stmt expr = new NullLiteral(this.previous().loc);
+        expr.type.baseType = TypesNative.VOID;
+        if (!this.match([TokenType.SEMICOLON]))
+            expr = this.parseExpression(Precedence.LOWEST);
         return new ReturnStatement(expr, this.previous().loc);
     }
 
@@ -944,7 +1008,6 @@ private:
         if (isMultiple)
         {
             Stmt[] values;
-
             do
             {
                 values ~= this.parseExpression(Precedence.LOWEST);

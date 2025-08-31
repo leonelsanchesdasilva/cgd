@@ -12,26 +12,6 @@ string strRepeat(string s, ulong times)
     return result;
 }
 
-string typeInfoToString(FTypeInfo type)
-{
-    auto result = type.baseType;
-
-    if (type.isArray)
-    {
-        for (auto i = 0; i < type.dimensions; i++)
-        {
-            result ~= "[]";
-        }
-    }
-
-    if (type.isPointer)
-    {
-        result ~= strRepeat("*", type.pointerLevel) ~ result;
-    }
-
-    return result;
-}
-
 FTypeInfo inferUnaryType(string operator, Stmt operand)
 {
     switch (operator)

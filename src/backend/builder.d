@@ -11,10 +11,10 @@ import frontend.parser.ftype_info;
 import frontend.parser.ast;
 import frontend.parser.ast_utils;
 import frontend.values;
-import middle.std_lib_module_builder : StdLibFunction;
+import middle.stdlib.std_lib_module_builder : StdLibFunction;
 import backend.codegen.core;
 import middle.semantic;
-import middle.primitives;
+import middle.stdlib.primitives;
 
 alias GenerationResult = Variant;
 
@@ -245,6 +245,10 @@ private:
             return GenerationResult(genNewExpr(cast(NewExpr) node));
         case NodeType.ThisExpr:
             return GenerationResult(genThisExpr(cast(ThisExpr) node));
+        case NodeType.IndexExpr:
+            return GenerationResult(genIndexExpr(cast(IndexExpr) node));
+        case NodeType.IndexExprAssignment:
+            return GenerationResult(genIndexExprAssignment(cast(IndexExprAssignment) node));
 
         default:
             throw new Exception(format("NodeType desconhecido '%s'.", node.kind));
@@ -516,6 +520,21 @@ private:
 
         auto classType = new Type(TypeKind.Custom, className);
         return new NewExpression(classType, args);
+    }
+
+    Expression genIndexExprAssignment(IndexExprAssignment node)
+    {
+        // TODO: fazer validação
+        return new IndexExpressionAssignment(getType(node.type), asExpression(generate(node.left)),
+            asExpression(generate(node.index)), asExpression(generate(node.value)));
+    }
+
+    Expression genIndexExpr(IndexExpr node)
+    {
+        // TODO: fazer validação
+        return new IndexExpression(getType(node.type), asExpression(generate(node.left)), asExpression(
+                generate(
+                node.index)));
     }
 
     Expression genThisExpr(ThisExpr node)

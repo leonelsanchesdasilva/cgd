@@ -1,29 +1,27 @@
 importar "io"
 
-var pesoInicial1, pesoInicial2, entrada1, entrada2, erro = 0.3, 0.4, 1, 1, 1
+var pesos, entrada, erro = [0.3, 0.4], [1, 1], 1
 var resultadoEsperado: inteiro;
+
 enquanto (erro != 0){
-    se (entrada1 == 1) {
-        se (entrada2 == 1) {
-            resultadoEsperado = 1
-        }
-    } senão {
-        resultadoEsperado = 0
-    }
-    var somatoria = pesoInicial1 * entrada1 + pesoInicial2 * entrada2
+    se (entrada[0] == 1)
+        se (entrada[1] == 1) resultadoEsperado = 1
+    senão resultadoEsperado = 0
+    
+    var somatoria = pesos[0] * entrada[0] + pesos[1] * entrada[1]
     var resultado: inteiro;
-    se (somatoria < 1) {
-        resultado = 0
-    } senão {
-        se (somatoria >= 1) {
-            resultado = 1
-        }
-    }
+
+    se (somatoria < 1) resultado = 0
+    senão se (somatoria >= 1) resultado = 1
+
     escrevaln('resultado: ', resultado)
     erro = resultadoEsperado - resultado
-    escrevaln('p1: ', pesoInicial1)
-    escrevaln('p2: ', pesoInicial2)
-    pesoInicial1 =  0.1 * entrada1 * erro + pesoInicial1
-    pesoInicial2 =  0.1 * entrada2 * erro + pesoInicial2
+    
+    escrevaln('p1: ', pesos[0])
+    escrevaln('p2: ', pesos[1])
+    
+    pesos[0] =  0.1 * entrada[0] * erro + pesos[0]
+    pesos[1] =  0.1 * entrada[1] * erro + pesos[1]
+    
     escrevaln('erro: ', erro)
 }

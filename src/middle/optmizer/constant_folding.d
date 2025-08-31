@@ -1,4 +1,4 @@
-module middle.constant_folding;
+module middle.optmizer.constant_folding;
 
 import std.stdio;
 import std.conv;
@@ -60,6 +60,10 @@ private:
                 return Variant(leftVal - rightVal);
             case "*":
                 return Variant(leftVal * rightVal);
+            case "**":
+                return Variant(leftVal ^^ rightVal);
+            case "<<":
+                return Variant(leftVal << rightVal);
             case "/":
                 if (rightVal == 0)
                     throw new Exception("Divisão por zero detectada durante constant folding");
@@ -87,6 +91,10 @@ private:
                 return Variant(leftVal - rightVal);
             case "*":
                 return Variant(leftVal * rightVal);
+            case "**":
+                return Variant(leftVal ^^ rightVal);
+            case "<<":
+                return Variant(to!long(leftVal) << to!long(rightVal));
             case "/":
                 if (rightVal == 0.0f)
                     throw new Exception("Divisão por zero detectada durante constant folding");
@@ -113,6 +121,10 @@ private:
                 return Variant(leftVal - rightVal);
             case "*":
                 return Variant(leftVal * rightVal);
+            case "**":
+                return Variant(leftVal ^^ rightVal);
+            case "<<":
+                return Variant(to!long(leftVal) << to!long(rightVal));
             case "/":
                 if (rightVal == 0.0f)
                     throw new Exception("Divisão por zero detectada durante constant folding");
@@ -199,14 +211,18 @@ private:
             binary.right = binaryExpr(cast(BinaryExpr) binary.right);
 
         if (!isLiteral(binary.left) || !isLiteral(binary.right))
+        {
+            binary.left = processStatement(binary.left);
+            binary.right = processStatement(binary.right);
             return binary;
+        }
 
         try
         {
             Variant result;
 
-            if (binary.op == "+" || binary.op == "-" || binary.op == "*" ||
-                binary.op == "/" || binary.op == "%")
+            if (binary.op == "+" || binary.op == "-" || binary.op == "*" || binary.op == "**" ||
+                binary.op == "/" || binary.op == "%" || binary.op == "<<")
             {
                 result = performArithmeticOp(binary.left, binary.right, binary.op);
             }
@@ -330,6 +346,22 @@ public:
             if (retStmt.expr !is null)
                 retStmt.expr = processStatement(retStmt.expr);
             return retStmt;
+        case NodeType.CallExpr:
+            auto callStmt = cast(CallExpr) stmt;
+            for (long i; i < callStmt.args.length; i++)
+                callStmt.args[i] = processStatement(callStmt.args[i]);
+            return callStmt;
+        case NodeType.IndexExpr:
+            IndexExpr indexExpr = cast(IndexExpr) stmt;
+            indexExpr.left = processStatement(indexExpr.left);
+            indexExpr.index = processStatement(indexExpr.index);
+            return indexExpr;
+        case NodeType.IndexExprAssignment:
+            IndexExprAssignment indexExprA = cast(IndexExprAssignment) stmt;
+            indexExprA.left = processStatement(indexExprA.left);
+            indexExprA.index = processStatement(indexExprA.index);
+            indexExprA.value = processStatement(indexExprA.value);
+            return indexExprA;
         default:
             return stmt;
         }
