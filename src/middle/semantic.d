@@ -41,16 +41,16 @@ public:
             .defineFunction("escreva")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
-            .customTargetType("void")
+            .customTargetType(createTypeInfo("void"))
             .libraryName("io_escreva")
-            .generateDExternComplete()
+            .generateDExternWithPragma()
             .done()
             .defineFunction("escrevaln")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
-            .customTargetType("void")
+            .customTargetType(createTypeInfo("void"))
             .libraryName("io_escrevaln")
-            .generateDExternComplete()
+            .generateDExternWithPragma()
             .done();
 
         this.stdLibs["io"] = mod.moduleData;
@@ -81,7 +81,6 @@ public:
     }
 
 private:
-    static Nullable!Semantic instance = null;
     Stmt[] nodes;
     TypeChecker typeChecker;
     DiagnosticError error;
@@ -389,48 +388,131 @@ private:
         // Analisa o objeto à esquerda do ponto
         node.object = this.analyzeNode(node.object);
 
+        // Valida e processa o objeto base
+        validateObjectType(node);
+
+        // Analisa argumentos se for uma chamada de método
+        if (node.isMethodCall)
+        {
+            analyzeMethodArguments(node);
+        }
+
+        // Determina o tipo de retorno do membro
+        node.type = determineMemberReturnType(node);
+
+        return node;
+    }
+
+    void validateObjectType(MemberCallExpr node)
+    {
         if (node.object.type.baseType == TypesNative.CLASS)
         {
             string className = node.object.type.className;
-            // string memberName = node.member.value.get!string;
 
-            // Verificar se a propriedade/método existe na classe
             if (!this.typeChecker.isValidClass(className))
-                throw new Exception(format("Classe '%s' não encontrada.", className));
+            {
+                string errorMsg = format("Classe '%s' não encontrada.", className);
+                this.error.addError(Diagnostic(errorMsg, node.object.loc));
+                throw new Exception(errorMsg);
+            }
 
             // TODO: Implementar verificação de membros da classe
+            // validateClassMember(className, node.member);
         }
+    }
 
-        // Analisa o membro (já deve ser um Identifier)
-        // node.member = cast(Identifier) this.analyzeNode(node.member);
+    void analyzeMethodArguments(MemberCallExpr node)
+    {
+        if (node.args.length == 0)
+            return;
 
-        // TODO: Verificar se é um primitivo, se for deve haver validação, baseado no tipo do node.object
-        string id = node.member.value.get!string;
-        string type = cast(string) node.object.type.baseType;
-        if (primitive.exists(type) && id in primitive.get(type)
-            .properties)
+        // Analisa cada argumento
+        Stmt[] analyzedArgs;
+        foreach (arg; node.args)
         {
-            node.type = createTypeInfo(primitive.get(type)
-                    .properties[id].type);
+            analyzedArgs ~= this.analyzeNode(arg);
         }
-        else
+        node.args = analyzedArgs;
+
+        // Valida argumentos para tipos primitivos
+        validatePrimitiveMethodCall(node);
+    }
+
+    void validatePrimitiveMethodCall(MemberCallExpr node)
+    {
+        string memberId = node.member.value.get!string;
+        string objectType = cast(string) node.object.type.baseType;
+
+        if (!primitive.exists(objectType) || memberId !in primitive.get(objectType).properties)
         {
-            // Por enquanto, definimos o tipo como o tipo do objeto
-            // Em uma implementação mais completa, isso seria determinado
-            // baseado no tipo do objeto e no membro acessado
-            node.type = node.object.type;
+            return; // Não é um método primitivo, pula validação
         }
 
-        // Se for uma chamada de método, analisa os argumentos
-        if (node.isMethodCall && node.args.length > 0)
+        auto primitiveType = primitive.get(objectType);
+        auto method = primitiveType.properties[memberId];
+
+        // Valida número de argumentos
+        long expectedArgsCount = method.args.length - method.ignore;
+        if (node.args.length != expectedArgsCount)
         {
-            Stmt[] analyzedArgs;
-            foreach (arg; node.args)
-                analyzedArgs ~= this.analyzeNode(arg);
-            node.args = analyzedArgs;
+            string errorMsg = format(
+                "Número de argumentos incorreto. Esperado: %d, Recebido: %d",
+                expectedArgsCount,
+                node.args.length
+            );
+            this.error.addError(Diagnostic(errorMsg, node.member.loc));
+            throw new Exception(errorMsg);
         }
 
-        return node;
+        // Valida tipos dos argumentos
+        validateArgumentTypes(node, method);
+    }
+
+    void validateArgumentTypes(MemberCallExpr node, PrimitiveProperty method)
+    {
+        for (long i = method.ignore; i < node.args.length; i++)
+        {
+            if (node.args[i].type != method.args[i])
+            {
+                string errorMsg = format(
+                    "Argumento %d tem tipo incorreto. Esperado: %s, Recebido: %s",
+                    i + 1,
+                    cast(string) method.args[i].baseType,
+                    cast(string) node.args[i].type.baseType
+                );
+                this.error.addError(Diagnostic(errorMsg, node.args[i].loc));
+                throw new Exception(errorMsg);
+            }
+        }
+    }
+
+    FTypeInfo determineMemberReturnType(MemberCallExpr node)
+    {
+        string memberId = node.member.value.get!string;
+        string objectType = cast(string) node.object.type.baseType;
+
+        // Verifica se é um membro de tipo primitivo
+        if (primitive.exists(objectType) && memberId in primitive.get(objectType).properties)
+        {
+            return primitive.get(objectType).properties[memberId].type;
+        }
+
+        if (node.object.type.baseType == TypesNative.CLASS)
+        {
+            return determineClassMemberType(node);
+        }
+
+        // Fallback: retorna o tipo do objeto
+        return node.object.type;
+    }
+
+    FTypeInfo determineClassMemberType(MemberCallExpr node)
+    {
+        // TODO: Implementar determinação de tipo para membros de classe
+        // string className = node.object.type.className;
+        // string memberName = node.member.value.get!string;
+        // return this.typeChecker.getClassMemberType(className, memberName);
+        return node.object.type; // Temporário
     }
 
     SwitchStatement analyzeSwitchStatement(SwitchStatement node)
@@ -808,9 +890,9 @@ private:
 
         FTypeInfo returnType;
         FunctionParam[] userExpectedParams;
-        string[] stdExpectedParams;
+        FTypeInfo[] stdExpectedParams;
         bool isVariadic = false;
-        string funcType;
+        FTypeInfo funcType;
         bool isStdFunction = false;
 
         if (userFunc)
@@ -842,7 +924,7 @@ private:
             ));
         }
 
-        node.type = returnType;
+        node.type = funcType;
 
         if (!(funcName in this.identifiersUsed))
         {
@@ -870,81 +952,43 @@ private:
                 ));
             }
 
-            TypesNative expectedParamType;
-            string expectedParamTypeStr;
+            FTypeInfo expectedParamType;
 
             if (isStdFunction)
-            {
-                // Para std functions, params é string[]
-                expectedParamTypeStr = stdExpectedParams[i];
-                expectedParamType = stringToTypesNative(
-                    this.typeChecker.mapToDType(expectedParamTypeStr));
-                // expectedParamType = cast(TypesNative) this.typeChecker.mapToDType(
-                //     expectedParamTypeStr);
-            }
+                expectedParamType = stdExpectedParams[i];
             else
-            {
-                // Para user functions, params é FunctionParam[]
-                expectedParamType = userExpectedParams[i].type.baseType;
-                expectedParamTypeStr = userExpectedParams[i].targetType;
-            }
+                expectedParamType = userExpectedParams[i].type;
 
             FTypeInfo argType = analyzedArg.type;
 
-            if (argType.baseType != TypesNative.STRING && expectedParamType == TypesNative.STRING)
-            {
-                analyzedArg.type.baseType = TypesNative.STRING;
-
-                switch (argType.baseType)
-                {
-                case TypesNative.LONG:
-                    if (analyzedArg.value.hasValue())
-                    {
-                        analyzedArg.value = to!string(analyzedArg.value.get!long);
-                    }
-                    break;
-                case TypesNative.FLOAT:
-                    if (analyzedArg.value.hasValue())
-                    {
-                        analyzedArg.value = to!string(analyzedArg.value.get!float);
-                    }
-                    break;
-                case TypesNative.BOOL:
-                    if (analyzedArg.value.hasValue())
-                    {
-                        analyzedArg.value = analyzedArg.value.get!bool ? "true" : "false";
-                    }
-                    break;
-                default:
-                    break;
-                }
-
-                analyzedArgs ~= analyzedArg;
-                continue;
-            }
-
-            string argTypeStr = to!string(argType.baseType).toLower();
-            string paramTypeStr = expectedParamTypeStr.toLower();
+            string argTypeStr = cast(string) argType.baseType.toLower();
+            string paramTypeStr = cast(string) expectedParamType.baseType.toLower();
 
             if (!this.typeChecker.areTypesCompatible(argTypeStr, paramTypeStr))
             {
                 throw new Exception(format(
                         "O argumento %d da função '%s' espera tipo '%s', mas recebeu '%s'.",
-                        i + 1, funcName, expectedParamTypeStr, argTypeStr
+                        i + 1, funcName, paramTypeStr, argTypeStr
+                ));
+            }
+
+            if (argType.isArray != expectedParamType.isArray)
+            {
+                throw new Exception(format(
+                        "O argumento %d da função '%s' espera tipo '%s', mas recebeu '%s'.",
+                        i + 1, funcName, expectedParamType.isArray ? paramTypeStr ~ "[]" : paramTypeStr, argType
+                        .isArray ? argTypeStr ~ "[]" : argTypeStr
                 ));
             }
 
             if (this.typeChecker.areTypesCompatible(argTypeStr, paramTypeStr) &&
-                argType.baseType != expectedParamType)
-            {
-                analyzedArg.type.baseType = expectedParamType;
-            }
+                argType.baseType != expectedParamType.baseType)
+                analyzedArg.type = expectedParamType;
 
             analyzedArgs ~= analyzedArg;
         }
 
         node.args = analyzedArgs;
-
         return node;
     }
 
@@ -998,10 +1042,10 @@ private:
         {
             // writeln("PARAMS ", FunctionParam(arg.id.value.get!string, arg.type, to!string(
             //         arg.type.baseType)));
-            params ~= FunctionParam(arg.id.value.get!string, arg.type, to!string(arg.type.baseType));
+            params ~= FunctionParam(arg.id.value.get!string, arg.type, arg.type);
         }
 
-        Function func = Function(id, returnType, params, false, to!string(returnType.baseType));
+        Function func = Function(id, returnType, params, false, returnType);
         this.availableFunctions[id] = func;
 
         Stmt[] analyzedBlock;
@@ -1021,6 +1065,10 @@ private:
                     string t1 = to!string(returnStmt.type.baseType).toLower();
                     if (!this.typeChecker.areTypesCompatible(t1, t2) && t2 != "void")
                     {
+                        this.error.addError(Diagnostic(format(
+                                "A função '%s' está retornando '%s' ao invés de '%s' como esperado.",
+                                id, t1, t2
+                            ), returnStmt.loc));
                         throw new Exception(format(
                                 "A função '%s' está retornando '%s' ao invés de '%s' como esperado.",
                                 id, t1, t2
@@ -1032,6 +1080,9 @@ private:
 
         if (t2 != "void" && !hasReturn)
         {
+            this.error.addError(Diagnostic(format(
+                    "A função esperava um retorno '%s', mas não foi encontrado qualquer tipo de retorno nela.", t2),
+                    node.id.loc));
             throw new Exception(format(
                     "A função esperava um retorno '%s', mas não foi encontrado qualquer tipo de retorno nela.", t2),
             );

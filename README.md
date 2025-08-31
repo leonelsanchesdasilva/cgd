@@ -2,7 +2,7 @@
   <img src="docs/assets/logo.png" width="150" alt="cgd logo"/>
 </p>
 
-[![Versão](https://img.shields.io/badge/versão-v0.0.5-blue.svg)](https://github.com/fernandothedev/cgd)
+[![Versão](https://img.shields.io/badge/versão-v0.0.6-blue.svg)](https://github.com/fernandothedev/cgd)
 
 # CGD - Compilador Geral Delégua
 
@@ -95,28 +95,116 @@ Iniciado: 11 de agosto de 2025
 
 ### Funcionalidades implementadas
 
+#### **Core do Compilador**
+
 - [X] Lexer básico
   - [X] Lexer completo
 - [X] Parser básico
   - [X] Parser completo
 - [X] Analisador semântico básico
-  - [ ] Analisador semântico completo
+  - [X] Analisador semântico completo
+  - [X] Type checking robusto
+  - [X] Verificação de escopo
 - [ ] Otimizador
+  - [X] Otimizações básicas (bitwise para multiplicação/divisão)
+  - [ ] Dead code elimination
+  - [ ] Constant folding
 - [X] Gerador de código D
 - [X] Geração do binário
 - [X] Tratamento de erros eficiente
-- [ ] Criação de bibliotecas
-  - [X] io
-  - [ ] math
-  - [ ] http
-  - [ ] json
-  - [ ] cripto
+
+#### **Tipos de Dados**
+
+- [X] Tipos primitivos
+  - [X] `inteiro` / `logico` / `texto` / `decimal`
+  - [X] Literais numéricos múltiplos (hex: `0x45`, octal: `0o105`, binário: `01000101b`)
+- [X] Arrays (`inteiro[]`)
+- [X] Strings com métodos (`tamanho`, `substituir`, `dividir`)
+- [ ] HashMap/Dicionários
+- [ ] Sets
+
+#### **Estruturas de Controle**
+
+- [X] Condicionais (`se`/`senão`)
+- [X] Switch (`escolha`/`caso`/`padrao`/`quebrar`)
+- [X] Loops
+  - [X] `para` (for loop)
+  - [X] `enquanto` (while)
+  - [X] `fazer/enquanto` (do-while)
+
+#### **Orientação a Objetos**
+
+- [X] Classes básicas
+  - [X] Propriedades com tipos
+  - [X] Métodos com tipos de retorno
+  - [X] Palavra-chave `isto` (this)
+  - [X] Instanciação com `novo`
+  - [X] Method chaining (`obj.a().b().a()`)
+- [ ] Herança
+- [ ] Interfaces
+- [ ] Construtores customizados
+
+#### **Operadores**
+
+- [X] Aritméticos básicos (`+`, `-`, `*`, `/`, `%`, `**`)
+- [X] Bitwise completos (`|`, `&`, `^`, `~`, `<<`, `>>`)
+- [X] Atribuição composta (`++`, `+=`, `|=`)
+- [X] Comparação (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+- [X] Lógicos (`&&`, `||`, `!`)
+
+#### **Funções**
+
+- [X] Definição com tipos explícitos
+- [X] Múltiplos parâmetros e retorno
+- [X] Recursão
+- [ ] Funções como valores
+
+#### **Sistema de Módulos**
+
+- [X] `importar "modulo"`
+- [X] `importar { funcao } de "modulo"`
+- [X] Imports seletivos
+
+#### **Bibliotecas**
+
+- [X] **io**
+  - [X] `escrevaln` / `escreva`
+  - [X] `leia` (input do usuário)
+- [ ] **math**
+  - [ ] Funções trigonométricas
+  - [ ] Logaritmos e exponenciais
+  - [ ] Constantes matemáticas
+- [ ] **http**
+  - [ ] Cliente HTTP básico
+  - [ ] Servidor HTTP simples
+- [ ] **json**
+  - [ ] Parse/stringify
+- [ ] **cripto**
+  - [ ] Hash functions (MD5, SHA)
+  - [ ] Criptografia básica
+
+#### **Recursos Avançados**
+
+- [X] Declaração múltipla (`var a, b, c = 1, 2, 3`)
+- [X] Inferência de tipos (parcial)
+- [X] Comentários (`//`)
+- [ ] Generics/Templates
+- [ ] Pattern matching
+- [ ] Async/await
+- [ ] Memory management customizado
+
+#### **Ferramentas**
+
+- [X] Compilação (`cgd compilar`)
+- [X] Transpilação (`cgd transpilar`)
+- [X] Benchmarking integrado
+- [ ] Debugger
+- [ ] Formatter
+- [ ] LSP (Language Server Protocol)
 
 ### Próximos passos
 
 - Suporte completo ao Windows
-- Melhorias no parser e analisador semântico
-- Sistema de módulos e bibliotecas
 - Otimizações avançadas
 
 ## Contribuição

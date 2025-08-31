@@ -9,8 +9,8 @@ struct StdLibFunction
 {
     string name;
     FTypeInfo returnType;
-    string targetType;
-    string[] params;
+    FTypeInfo targetType;
+    FTypeInfo[] params;
     bool isVariadic;
     string targetName;
     string ir;
@@ -30,7 +30,7 @@ struct FunctionParam
 {
     string name;
     FTypeInfo type;
-    string targetType;
+    FTypeInfo targetType;
 }
 
 struct Function
@@ -39,7 +39,7 @@ struct Function
     FTypeInfo returnType;
     FunctionParam[] params;
     bool isVariadic;
-    string targetType;
+    FTypeInfo targetType;
 }
 
 struct StdLibModule

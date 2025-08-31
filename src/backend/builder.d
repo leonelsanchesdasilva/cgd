@@ -47,6 +47,7 @@ private:
     // Para suporte a classes
     StructDefinition currentClass;
     string[string] classTypes; // Mapeia nomes de classes para tipos
+    bool[string] mangles;
 
     Type getType(FTypeInfo t)
     {
@@ -74,7 +75,6 @@ private:
             break;
         default:
             // Verificar se é um tipo de classe customizado
-            writeln(t);
             if (t.className in classTypes)
             {
                 result = new Type(TypeKind.Custom, t.className);
@@ -83,6 +83,11 @@ private:
             {
                 throw new Exception(format("Tipo desconhecido '%s'.", t.baseType));
             }
+        }
+
+        if (t.isArray)
+        {
+            result = new Type(TypeKind.Array, cast(string) t.baseType, result);
         }
 
         typeCache[t.baseType] = result;
@@ -260,7 +265,9 @@ private:
 
     Expression genArrayLiteral(ArrayLiteral node)
     {
+        writeln(node.elements);
         Expression[] elements = node.elements.map!(x => generate(x).get!Expression).array;
+        writeln(elements);
         return new ArrayLiteralExpression(new Type(TypeKind.Array, cast(string) node.type.baseType, this.getType(
                 node.type)), elements);
     }
@@ -591,44 +598,61 @@ private:
         return null;
     }
 
+    Expression genPrimitive(MemberCallExpr node, Expression[] args = [
+        ])
+    {
+        // vamos traduzir pra uma chamada de função
+        PrimitiveProperty fn;
+
+        if (node.object.type.isArray)
+        {
+            fn = semantic.primitive.get("array")
+                .properties[node.member.value.get!string];
+            fn.args[0] = node.object.type; // atualiza o primeiro argumento pro tipo atual
+            // fn.args[0].baseType = TypesNative.T;
+        }
+        else
+            fn = semantic.primitive.get(cast(string) node.object.type.baseType)
+                .properties[node.member.value.get!string];
+
+        if (fn.mangle !in mangles)
+        {
+            mangles[fn.mangle] = true;
+            codegen.currentModule.addStdFunction(fn.generateD());
+        }
+
+        return new CallExpression(getType(node.object.type), fn.mangle, args);
+    }
+
     Expression genMemberCallExpr(MemberCallExpr node)
     {
         Expression objectExpr = asExpression(generate(node.object));
         string memberName = node.member.value.get!string;
+        string type = cast(string) node.object.type.baseType; // a esquerda do ponto
+        GenerationResult obj = generate(node.object);
+        Expression[] args;
+
+        if (node.object.type.isArray)
+            type = "array";
 
         if (node.isMethodCall)
         {
-            // É uma chamada de método
-            Expression[] args;
             foreach (arg; node.args)
-            {
                 args ~= asExpression(generate(arg));
+            if (semantic.primitive.exists(type))
+            {
+                args = asExpression(obj) ~ args;
+                return genPrimitive(node, args);
             }
-
             return new MethodCallExpression(getType(node.type), objectExpr, memberName, args);
         }
         else
         {
-            // É acesso a propriedade/campo
-            // TODO: validar essa porra de forma geral
-
-            // TODO: validar essa porra que estou fazendo
-            // vamos ignorar argumentos por enquanto
-            GenerationResult obj = generate(node.object);
-            string type = typeInfoToString(node.object.type); // a esquerda do ponto
             if (semantic.primitive.exists(type))
             {
-                // vamos traduzir pra uma chamada de função
-                PrimitiveProperty fn = semantic.primitive.get(cast(string) node.object.type.baseType)
-                    .properties[node.member.value.get!string];
-
-                // vamos adicionar isso ao contexto
-                codegen.currentModule.addStdFunction(fn.generateD());
-
-                Expression[] args = [asExpression(obj)];
-                return new CallExpression(getType(node.object.type), fn.mangle, args);
+                args = asExpression(obj) ~ args;
+                return genPrimitive(node, args);
             }
-
             return new MemberAccessExpression(getType(node.type), objectExpr, memberName);
         }
     }
@@ -1040,7 +1064,7 @@ private:
 
     Expression genStringLiteral(StringLiteral node)
     {
-        return new LiteralExpression(getType(node.type), node.value.get!string);
+        return new LiteralExpression(getType(node.type), format("\"%s\"", node.value.get!string));
     }
 
     Expression genIntLiteral(IntLiteral node)

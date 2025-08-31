@@ -90,6 +90,8 @@ class TypeChecker
             return "void*";
         case TypesNative.CLASS:
             return "class";
+        case TypesNative.T:
+            return "T";
         }
     }
 

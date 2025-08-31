@@ -4,6 +4,7 @@ import std.stdio;
 import std.process;
 import std.file;
 import std.path;
+import std.array;
 import std.string;
 import std.conv;
 import std.algorithm;
@@ -205,8 +206,10 @@ class TestadorCGD
                 "Primitivos",
                 "examples/primitivos.delegua",
                 [
-                    "Tamanho do nome: 8",
-                    "Tamanho do tamanho do nome: 1",
+                    "Nome: Fernando Dev",
+                    "[\"Fernando\", \"Cabral\"]",
+                    "Tamanho do nome: 15",
+                    "Tamanho do tamanho do nome: 2"
                 ],
                 true,
                 false,
@@ -364,6 +367,10 @@ class TestadorCGD
         foreach (teste; casosTeste)
         {
             executeShell(executavelCgd ~ " transpilar " ~ teste.arquivoEntrada);
+            // TODO: validar se o arquivo existe
+            string file = teste.arquivoEntrada.split("/")[1].split(".")[0] ~ ".d";
+            if (exists(file))
+                remove(file);
         }
         auto duracao = MonoTime.currTime - inicio;
 
