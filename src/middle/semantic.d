@@ -438,15 +438,15 @@ private:
         validatePrimitiveMethodCall(node);
     }
 
-    void validatePrimitiveMethodCall(MemberCallExpr node)
+    void validatePrimitiveMethodCall(ref MemberCallExpr node)
     {
         string memberId = node.member.value.get!string;
         string objectType = cast(string) node.object.type.baseType;
+        if (node.object.type.isArray)
+            objectType = "array";
 
         if (!primitive.exists(objectType) || memberId !in primitive.get(objectType).properties)
-        {
-            return; // Não é um método primitivo, pula validação
-        }
+            return;
 
         auto primitiveType = primitive.get(objectType);
         auto method = primitiveType.properties[memberId];

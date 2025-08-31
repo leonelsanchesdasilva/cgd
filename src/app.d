@@ -10,6 +10,7 @@ import frontend.lexer.token;
 import frontend.parser.parser;
 import frontend.parser.ast;
 import middle.semantic;
+import middle.constant_folding;
 import backend.builder;
 import backend.compiler;
 import updater;
@@ -19,7 +20,7 @@ alias fileWrite = std.file.write;
 
 string HOME, MAIN_DIR, STDLIB_DIR;
 
-enum string VERSAO = "v0.0.5";
+enum string VERSAO = "v0.0.6";
 enum string NOME_PROGRAMA = "cgd";
 enum string NOME_COMPLETO = "Compilador Geral Delégua";
 
@@ -48,12 +49,14 @@ void main(string[] args)
 	bool mostrarVersao = false;
 	bool mostrarAjuda = false;
 	bool verboso = false;
+	bool bigO;
 
 	try
 	{
 		getopt(args,
 			"o|output", "Especifica o arquivo de saída", &arquivoSaida,
 			"v|version", "Mostra a versão do compilador", &mostrarVersao,
+			"0|optimize", "Aplica otimizações ao código", &bigO,
 			"h|help", "Mostra esta mensagem de ajuda", &mostrarAjuda,
 			"verbose", "Modo verboso - mostra informações detalhadas", &verboso
 		);
@@ -124,7 +127,7 @@ void main(string[] args)
 			writefln("Arquivo de saída: %s", arquivoSaida);
 		}
 
-		processarArquivo(arquivo, arquivoSaida, comando, verboso);
+		processarArquivo(arquivo, arquivoSaida, comando, verboso, bigO);
 
 	}
 	catch (GetOptException e)
@@ -175,6 +178,7 @@ void mostrarMensagemAjuda()
 	writeln("  -o, --output ARQUIVO  Especifica o arquivo de saída");
 	writeln("  -v, --version         Mostra a versão do compilador");
 	writeln("  -h, --help            Mostra esta mensagem de ajuda");
+	writeln("  -0, --optimize        Aplica otimizações ao código");
 	writeln("  --verbose             Modo verboso - mostra informações detalhadas");
 	writeln("");
 	writeln("Exemplos:");
@@ -212,7 +216,7 @@ bool checkErrors(DiagnosticError error)
 	return false;
 }
 
-void processarArquivo(string arquivo, string arquivoSaida, string comando, bool verboso)
+void processarArquivo(string arquivo, string arquivoSaida, string comando, bool verboso, bool bigO)
 {
 	DiagnosticError error = new DiagnosticError();
 	try
@@ -258,6 +262,18 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 		if (verboso)
 		{
 			writeln("Análise semântica concluída.");
+			writeln("Iniciando otimização...");
+		}
+
+		if (bigO)
+		{
+			ConstantFolding cf = new ConstantFolding(error);
+			newProgram = cf.prog(newProgram);
+		}
+
+		if (verboso)
+		{
+			writeln("Otimização concluída.");
 			if (comando == "compilar")
 			{
 				writeln("Iniciando geração de código...");

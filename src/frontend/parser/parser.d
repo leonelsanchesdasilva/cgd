@@ -175,6 +175,7 @@ private:
         }
         Loc end = this.consume(TokenType.RBRACKET, "Esperado ']' após a declaração do vetor.")
             .loc;
+        type[1].isArray = true;
         return new ArrayLiteral(elements, type[1], this.makeLoc(start, end));
     }
 
