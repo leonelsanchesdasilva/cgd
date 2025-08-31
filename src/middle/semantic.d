@@ -9,9 +9,11 @@ import middle.semantic_symbol_info;
 import middle.function_builder;
 import middle.std_lib_module_builder;
 import middle.type_checker;
+import middle.primitives;
 import frontend.parser.ast;
 import frontend.values;
 import frontend.parser.ftype_info;
+import error;
 
 class Semantic
 {
@@ -24,11 +26,14 @@ public:
     StdLibModule[string] stdLibs;
     bool[string] identifiersUsed;
     string currentClassName = ""; // Para rastrear contexto de classe
+    StdPrimitive primitive;
 
-    this()
+    this(DiagnosticError e)
     {
+        this.error = e;
         this.pushScope();
         this.typeChecker = getTypeChecker(this);
+        this.primitive = new StdPrimitive(); // carrega tudo
 
         // TODO: Criar uma classe para setar os módulos|libs
         // Vamos adicionar isso aqui temporariamente
@@ -49,10 +54,6 @@ public:
             .done();
 
         this.stdLibs["io"] = mod.moduleData;
-        // importedModules["io"] = true;
-        // availableStdFunctions["escreva"] = escreva.getFunction("escreva");
-        // availableStdFunctions["escrevaln"] = escrevaln.getFunction("escrevaln");
-        // availableStdFunctions["leia"] = leia.getFunction("leia");
     }
 
     Program semantic(Program program)
@@ -67,6 +68,7 @@ public:
             }
             catch (Exception e)
             {
+                // da pra ignorar isso não ironicamente
                 writeln("Erro no semantic: ", e.message);
                 writeln("Erro no semantic: ", e.file);
                 writeln("Erro no semantic: ", e.line);
@@ -78,24 +80,11 @@ public:
         return program;
     }
 
-    static Semantic getInstance()
-    {
-        if (!Semantic.instance)
-        {
-            Semantic.instance = new Semantic();
-        }
-        return Semantic.instance.get;
-    }
-
-    void resetInstance()
-    {
-        Semantic.instance = null;
-    }
-
 private:
     static Nullable!Semantic instance = null;
     Stmt[] nodes;
     TypeChecker typeChecker;
+    DiagnosticError error;
 
     Stmt analyzeNode(Stmt node)
     {
@@ -146,6 +135,9 @@ private:
         case NodeType.WhileStatement:
             analyzedNode = this.analyzeWhileStatement(cast(WhileStatement) node);
             break;
+        case NodeType.DoWhileStatement:
+            analyzedNode = this.analyzeDoWhileStatement(cast(DoWhileStatement) node);
+            break;
         case NodeType.AssignmentDeclaration:
             analyzedNode = this.analyzeAssignmentDeclaration(cast(AssignmentDeclaration) node);
             break;
@@ -191,6 +183,7 @@ private:
         case NodeType.FloatLiteral:
         case NodeType.NullLiteral:
         case NodeType.BoolLiteral:
+        case NodeType.ArrayLiteral:
             analyzedNode = node;
             string baseType = this.typeChecker.getTypeStringFromNative(analyzedNode.type.baseType);
             analyzedNode.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
@@ -231,6 +224,7 @@ private:
 
         // Analisar métodos
         ClassMethodDeclaration[] analyzedMethods;
+        this.currentClassName = className;
         foreach (method; node.methods)
         {
             this.pushScope(); // Escopo do método
@@ -262,6 +256,7 @@ private:
             }
             method.body = analyzedBody;
             method.context = this.currentScope();
+            method.type.className = className;
 
             analyzedMethods ~= method;
             this.popScope();
@@ -283,6 +278,7 @@ private:
                 DestructorDeclaration) this.analyzeDestructorDeclaration(node.destruct);
         }
 
+        this.currentClassName = "";
         node.type = classType;
         return node;
     }
@@ -408,21 +404,31 @@ private:
         // Analisa o membro (já deve ser um Identifier)
         // node.member = cast(Identifier) this.analyzeNode(node.member);
 
+        // TODO: Verificar se é um primitivo, se for deve haver validação, baseado no tipo do node.object
+        string id = node.member.value.get!string;
+        string type = cast(string) node.object.type.baseType;
+        if (primitive.exists(type) && id in primitive.get(type)
+            .properties)
+        {
+            node.type = createTypeInfo(primitive.get(type)
+                    .properties[id].type);
+        }
+        else
+        {
+            // Por enquanto, definimos o tipo como o tipo do objeto
+            // Em uma implementação mais completa, isso seria determinado
+            // baseado no tipo do objeto e no membro acessado
+            node.type = node.object.type;
+        }
+
         // Se for uma chamada de método, analisa os argumentos
         if (node.isMethodCall && node.args.length > 0)
         {
             Stmt[] analyzedArgs;
             foreach (arg; node.args)
-            {
                 analyzedArgs ~= this.analyzeNode(arg);
-            }
             node.args = analyzedArgs;
         }
-
-        // Por enquanto, definimos o tipo como o tipo do objeto
-        // Em uma implementação mais completa, isso seria determinado
-        // baseado no tipo do objeto e no membro acessado
-        node.type = node.object.type;
 
         return node;
     }
@@ -733,16 +739,21 @@ private:
         return node;
     }
 
+    DoWhileStatement analyzeDoWhileStatement(DoWhileStatement node)
+    {
+        // this(Stmt cond, Stmt[] body, Loc loc)
+        node.cond = this.analyzeNode(node.cond);
+        for (long i; i < node.body.length; i++)
+            node.body[i] = this.analyzeNode(node.body[i]);
+        return node;
+    }
+
     WhileStatement analyzeWhileStatement(WhileStatement node)
     {
         // this(Stmt cond, Stmt[] body, Loc loc)
         node.cond = this.analyzeNode(node.cond);
-
         for (long i; i < node.body.length; i++)
-        {
             node.body[i] = this.analyzeNode(node.body[i]);
-        }
-
         return node;
     }
 
@@ -752,12 +763,8 @@ private:
         node._init = this.analyzeNode(node._init);
         node.cond = this.analyzeNode(node.cond);
         node.expr = this.analyzeNode(node.expr);
-
         for (long i; i < node.body.length; i++)
-        {
             node.body[i] = this.analyzeNode(node.body[i]);
-        }
-
         return node;
     }
 
@@ -1116,9 +1123,12 @@ private:
         Stmt analyzedValue = this.analyzeNode(node.value.get!Stmt);
         node.value = analyzedValue;
 
+        // TODO: validar os tipos
+
         string baseType = this.typeChecker.getTypeStringFromNative(analyzedValue.type.baseType);
         node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
         node.type.className = analyzedValue.type.className;
+        node.type.isArray = analyzedValue.type.isArray;
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
 
         return node;

@@ -1,3 +1,5 @@
+importar "io"
+
 var idade: inteiro = 17
-var novaIdade: texto = (texto)idade
+var novaIdade: texto = idade
 escrevaln(novaIdade)

@@ -2,6 +2,7 @@ import std.stdio;
 import std.getopt;
 import std.file;
 import std.path;
+import std.process : environment;
 import std.array : split;
 import std.string : format;
 import frontend.lexer.lexer;
@@ -12,15 +13,37 @@ import middle.semantic;
 import backend.builder;
 import backend.compiler;
 import updater;
+import error;
 
 alias fileWrite = std.file.write;
 
-enum string VERSAO = "v0.0.4";
+string HOME, MAIN_DIR, STDLIB_DIR;
+
+enum string VERSAO = "v0.0.5";
 enum string NOME_PROGRAMA = "cgd";
 enum string NOME_COMPLETO = "Compilador Geral Delégua";
 
 void main(string[] args)
 {
+	version (Posix)
+	{
+		HOME = environment.get("HOME");
+		MAIN_DIR = HOME ~ "/.cgd/";
+		STDLIB_DIR = HOME ~ "/.cgd/stdlib/";
+
+		if (!exists(MAIN_DIR) || !exists(STDLIB_DIR))
+		{
+			// erro
+			writefln("Erro ao buscar diretório principal '%s', reinstale o compilador.", MAIN_DIR);
+			return;
+		}
+	}
+	else version (Windows)
+	{
+		// sem suporte.
+		return;
+	}
+
 	string arquivoSaida = "";
 	bool mostrarVersao = false;
 	bool mostrarAjuda = false;
@@ -179,8 +202,19 @@ void mostrarCopyright()
 	writeln("PROPÓSITO PARTICULAR.");
 }
 
+bool checkErrors(DiagnosticError error)
+{
+	if (error.hasErrors() || error.hasWarnings())
+	{
+		error.printDiagnostics();
+		return true;
+	}
+	return false;
+}
+
 void processarArquivo(string arquivo, string arquivoSaida, string comando, bool verboso)
 {
+	DiagnosticError error = new DiagnosticError();
 	try
 	{
 		if (verboso)
@@ -191,8 +225,11 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 		string nomeArquivo = baseName(stripExtension(arquivo));
 		string conteudoArquivo = readText(arquivo);
 
-		Lexer lexer = new Lexer(nomeArquivo, conteudoArquivo, ".");
+		Lexer lexer = new Lexer(arquivo, conteudoArquivo, ".", error);
 		Token[] tokens = lexer.tokenize();
+
+		if (checkErrors(error))
+			return;
 
 		if (verboso)
 		{
@@ -200,8 +237,11 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 			writeln("Iniciando análise sintática...");
 		}
 
-		Parser parser = new Parser(tokens);
+		Parser parser = new Parser(tokens, error);
 		Program program = parser.parse();
+
+		if (checkErrors(error))
+			return;
 
 		if (verboso)
 		{
@@ -209,8 +249,11 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 			writeln("Iniciando análise semântica...");
 		}
 
-		Semantic semantic = new Semantic();
+		Semantic semantic = new Semantic(error);
 		Program newProgram = semantic.semantic(program);
+
+		if (checkErrors(error))
+			return;
 
 		if (verboso)
 		{
@@ -228,9 +271,12 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 		Builder builder = new Builder(newProgram, semantic);
 		builder.build();
 
+		if (checkErrors(error))
+			return;
+
 		if (comando == "compilar")
 		{
-			Compiler compiler = new Compiler(builder, nomeArquivo ~ ".d", arquivoSaida);
+			Compiler compiler = new Compiler(builder, nomeArquivo ~ ".d", arquivoSaida, STDLIB_DIR);
 			compiler.compile();
 
 			if (verboso)
@@ -265,6 +311,9 @@ void processarArquivo(string arquivo, string arquivoSaida, string comando, bool 
 	}
 	catch (Exception e)
 	{
+		if (checkErrors(error))
+			return;
+
 		writefln("cgd: erro durante o processamento: %s", e.msg);
 		if (verboso)
 		{

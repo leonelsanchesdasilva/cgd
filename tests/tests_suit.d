@@ -190,6 +190,27 @@ class TestadorCGD
                 true,
                 false,
                 5
+            ),
+            CasoTeste(
+                "Fazer enquanto",
+                "examples/fazer_enquanto.delegua",
+                [
+                    "5"
+                ],
+                true,
+                false,
+                5
+            ),
+            CasoTeste(
+                "Primitivos",
+                "examples/primitivos.delegua",
+                [
+                    "Tamanho do nome: 8",
+                    "Tamanho do tamanho do nome: 1",
+                ],
+                true,
+                false,
+                5
             )
         ];
     }
@@ -342,7 +363,7 @@ class TestadorCGD
         auto inicio = MonoTime.currTime;
         foreach (teste; casosTeste)
         {
-            auto resultado = executeShell(executavelCgd ~ " transpilar " ~ teste.arquivoEntrada);
+            executeShell(executavelCgd ~ " transpilar " ~ teste.arquivoEntrada);
         }
         auto duracao = MonoTime.currTime - inicio;
 

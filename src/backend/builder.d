@@ -5,12 +5,16 @@ import std.exception : enforce;
 import std.format;
 import std.conv;
 import std.variant;
+import std.algorithm;
+import std.array;
 import frontend.parser.ftype_info;
 import frontend.parser.ast;
+import frontend.parser.ast_utils;
 import frontend.values;
 import middle.std_lib_module_builder : StdLibFunction;
 import backend.codegen.core;
 import middle.semantic;
+import middle.primitives;
 
 alias GenerationResult = Variant;
 
@@ -70,9 +74,10 @@ private:
             break;
         default:
             // Verificar se é um tipo de classe customizado
+            writeln(t);
             if (t.className in classTypes)
             {
-                result = Type(TypeKind.Custom, t.className);
+                result = new Type(TypeKind.Custom, t.className);
             }
             else
             {
@@ -181,6 +186,8 @@ private:
             return GenerationResult(genElseStatement(cast(ElseStatement) node));
         case NodeType.WhileStatement:
             return GenerationResult(genWhileStatement(cast(WhileStatement) node));
+        case NodeType.DoWhileStatement:
+            return GenerationResult(genDoWhileStatement(cast(DoWhileStatement) node));
         case NodeType.ForStatement:
             return GenerationResult(genForStatement(cast(ForStatement) node));
         case NodeType.AssignmentDeclaration:
@@ -207,6 +214,8 @@ private:
             return GenerationResult(genBoolLiteral(cast(BoolLiteral) node));
         case NodeType.NullLiteral:
             return GenerationResult(genNullLiteral(cast(NullLiteral) node));
+        case NodeType.ArrayLiteral:
+            return GenerationResult(genArrayLiteral(cast(ArrayLiteral) node));
 
             // Identificadores
         case NodeType.Identifier:
@@ -249,7 +258,13 @@ private:
         return result.get!Expression;
     }
 
-    // Novos métodos para classes
+    Expression genArrayLiteral(ArrayLiteral node)
+    {
+        Expression[] elements = node.elements.map!(x => generate(x).get!Expression).array;
+        return new ArrayLiteralExpression(new Type(TypeKind.Array, cast(string) node.type.baseType, this.getType(
+                node.type)), elements);
+    }
+
     Statement genClassDeclaration(ClassDeclaration node)
     {
         auto className = node.id.value.get!string;
@@ -327,7 +342,7 @@ private:
         }
 
         auto constructor = new Method(
-            Type(TypeKind.Void),
+            new Type(TypeKind.Void),
             "this",
             params,
             false,
@@ -372,7 +387,7 @@ private:
     Method genDestructorMethod(DestructorDeclaration node)
     {
         auto destructor = new Method(
-            Type(TypeKind.Void),
+            new Type(TypeKind.Void),
             "~this",
             [],
             false,
@@ -494,7 +509,7 @@ private:
             args ~= asExpression(generate(arg));
         }
 
-        auto classType = Type(TypeKind.Custom, className);
+        auto classType = new Type(TypeKind.Custom, className);
         return new NewExpression(classType, args);
     }
 
@@ -505,7 +520,7 @@ private:
             throw new Exception("'isto' usado fora de uma classe");
         }
 
-        auto classType = Type(TypeKind.Custom, currentClass.name);
+        auto classType = new Type(TypeKind.Custom, currentClass.name);
 
         return new VariableExpression(classType, "this");
     }
@@ -595,6 +610,25 @@ private:
         else
         {
             // É acesso a propriedade/campo
+            // TODO: validar essa porra de forma geral
+
+            // TODO: validar essa porra que estou fazendo
+            // vamos ignorar argumentos por enquanto
+            GenerationResult obj = generate(node.object);
+            string type = typeInfoToString(node.object.type); // a esquerda do ponto
+            if (semantic.primitive.exists(type))
+            {
+                // vamos traduzir pra uma chamada de função
+                PrimitiveProperty fn = semantic.primitive.get(cast(string) node.object.type.baseType)
+                    .properties[node.member.value.get!string];
+
+                // vamos adicionar isso ao contexto
+                codegen.currentModule.addStdFunction(fn.generateD());
+
+                Expression[] args = [asExpression(obj)];
+                return new CallExpression(getType(node.object.type), fn.mangle, args);
+            }
+
             return new MemberAccessExpression(getType(node.type), objectExpr, memberName);
         }
     }
@@ -931,6 +965,20 @@ private:
         return _for;
     }
 
+    Statement genDoWhileStatement(DoWhileStatement node)
+    {
+        Expression cond = generate(node.cond).get!Expression;
+        Statement[] body = [];
+        foreach (Stmt stmt; node.body)
+        {
+            auto result = this.generate(stmt);
+            genBlock(result, body);
+        }
+
+        auto _while = new DoWhileStatementCore(cond, new BlockStatement(body));
+        return _while;
+    }
+
     Statement genWhileStatement(WhileStatement node)
     {
         Expression cond = generate(node.cond).get!Expression;
@@ -1063,7 +1111,7 @@ private:
                         if (abs(*floatVal - 0.5f) < 1e-6f)
                         {
                             // Retornar sqrt diretamente com o tipo correto
-                            auto doubleType = Type(TypeKind.Float64, "double");
+                            auto doubleType = new Type(TypeKind.Float64, "double");
                             return new CallExpression(doubleType, "sqrt", [
                                     new CastExpression(doubleType, leftExpr)
                                 ]);
@@ -1089,7 +1137,7 @@ private:
                     }
                 }
 
-                auto doubleType = Type(TypeKind.Float64, "double");
+                auto doubleType = new Type(TypeKind.Float64, "double");
                 return new CallExpression(doubleType, "pow", [
                         new CastExpression(doubleType, leftExpr),
                         new CastExpression(doubleType, rightExpr)
@@ -1305,9 +1353,7 @@ public:
 
         // importando as funções std para nosso contexto atual
         foreach (string name, StdLibFunction func; semantic.availableStdFunctions)
-        {
             this.globalScope[name] = Symbol(func.returnType, name, true);
-        }
     }
 
     void build()
@@ -1317,18 +1363,7 @@ public:
 
         // Adicionando as bibliotecas
         if (this.semantic.availableStdFunctions.length > 0)
-        {
-            // writeln("Adicionando bibliotecas.");
-            // writeln("Current Module: ", codegen.currentModule.name);
-            // writeln(codegen.currentModule.imports);
-            // writeln(codegen.currentModule.functions[0]);
-            // writeln(codegen.currentModule.globalStatements);
-            // writeln(codegen.currentModule.stdFunctions);
             foreach (string name, StdLibFunction fn; this.semantic.availableStdFunctions)
-            {
-                // writeln(fn.ir);
                 codegen.currentModule.addStdFunction(fn.ir);
-            }
-        }
     }
 }

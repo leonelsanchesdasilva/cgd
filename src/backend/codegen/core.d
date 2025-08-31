@@ -30,15 +30,23 @@ enum TypeKind
 }
 
 // Estrutura para representar tipos
-struct Type
+class Type
 {
     TypeKind kind;
     string name;
-    Type* elementType; // Para arrays, ponteiros
-    Type*[] paramTypes; // Para funções
-    Type* returnType; // Para funções
+    Type elementType; // Para arrays, ponteiros
+    Type[] paramTypes; // Para funções
+    Type returnType; // Para funções
 
-    string toString() const
+    this(TypeKind kind, string name = "", Type elementType = null, Type returnType = null)
+    {
+        this.kind = kind;
+        this.name = name;
+        this.elementType = elementType;
+        this.returnType = returnType; // ← Era 'result', agora é 'returnType'
+    }
+
+    string _toString() const
     {
         final switch (kind)
         {
@@ -69,9 +77,9 @@ struct Type
         case TypeKind.String:
             return "string";
         case TypeKind.Array:
-            return elementType ? elementType.toString() ~ "[]" : "void[]";
+            return elementType ? elementType._toString() ~ "[]" : "void[]";
         case TypeKind.Pointer:
-            return elementType ? elementType.toString() ~ "*" : "void*";
+            return elementType ? elementType._toString() ~ "*" : "void*";
         case TypeKind.Struct:
         case TypeKind.Custom:
             return name;
@@ -82,11 +90,11 @@ struct Type
                 string[] paramStrings;
                 foreach (t; paramTypes)
                 {
-                    paramStrings ~= t.toString();
+                    paramStrings ~= t._toString();
                 }
                 params = paramStrings.join(", ");
             }
-            string ret = returnType ? returnType.toString() : "void";
+            string ret = returnType ? returnType._toString() : "void";
             return format!"%s function(%s)"(ret, params);
         }
     }
@@ -224,7 +232,7 @@ class VariableDeclarationCore : Statement
 
     override string generateD(int indentLevel = 0)
     {
-        string result = indent(indentLevel) ~ type.toString() ~ " " ~ name;
+        string result = indent(indentLevel) ~ type._toString() ~ " " ~ name;
         if (initializer)
         {
             result ~= " = " ~ initializer.generateD();
@@ -341,6 +349,26 @@ class ElseStatementCore : Statement
     }
 }
 
+class DoWhileStatementCore : Statement
+{
+    Expression condition;
+    Statement body;
+
+    this(Expression condition, Statement body)
+    {
+        this.condition = condition;
+        this.body = body;
+    }
+
+    override string generateD(int indentLevel = 0)
+    {
+        string result = indent(indentLevel) ~ "do\n";
+        result ~= body.generateD(indentLevel);
+        result ~= " while (" ~ condition.generateD() ~ ");\n";
+        return result;
+    }
+}
+
 class WhileStatementCore : Statement
 {
     Expression condition;
@@ -438,9 +466,9 @@ struct Parameter
     Type type;
     string name;
 
-    string toString() const
+    string _toString() const
     {
-        return type.toString() ~ " " ~ name;
+        return type._toString() ~ " " ~ name;
     }
 }
 
@@ -469,12 +497,12 @@ class Function
         auto result = appender!string();
 
         // Assinatura da função
-        result.put(returnType.toString() ~ " " ~ name ~ "(");
+        result.put(returnType._toString() ~ " " ~ name ~ "(");
 
         string[] paramStrings;
         foreach (p; parameters)
         {
-            paramStrings ~= p.toString();
+            paramStrings ~= p._toString();
         }
         result.put(paramStrings.join(", "));
         result.put(") {\n");
@@ -587,32 +615,32 @@ class CodeGenerator
     // Helpers para criar tipos comuns
     static Type makeVoidType()
     {
-        return Type(TypeKind.Void);
+        return new Type(TypeKind.Void);
     }
 
     static Type makeFloatType()
     {
-        return Type(TypeKind.Float64);
+        return new Type(TypeKind.Float64);
     }
 
     static Type makeIntType()
     {
-        return Type(TypeKind.Int64);
+        return new Type(TypeKind.Int64);
     }
 
     static Type makeBoolType()
     {
-        return Type(TypeKind.Bool);
+        return new Type(TypeKind.Bool);
     }
 
     static Type makeStringType()
     {
-        return Type(TypeKind.String);
+        return new Type(TypeKind.String);
     }
 
     static Type makeArrayType(Type elementType)
     {
-        Type arrayType = Type(TypeKind.Array);
+        Type arrayType = new Type(TypeKind.Array);
         arrayType.elementType = new Type(elementType.kind, elementType.name); // Correção aqui
         return arrayType;
     }
@@ -685,7 +713,7 @@ class StructDefinition
         // Campos
         foreach (field; fields)
         {
-            result.put("    " ~ field.toString() ~ "\n");
+            result.put("    " ~ field._toString() ~ "\n");
         }
 
         if (fields.length > 0 && methods.length > 0)
@@ -723,9 +751,9 @@ struct Field
     string name;
     string defaultValue;
 
-    string toString() const
+    string _toString() const
     {
-        string result = type.toString() ~ " " ~ name;
+        string result = type._toString() ~ " " ~ name;
         if (defaultValue.length > 0)
         {
             result ~= " = " ~ defaultValue;
@@ -764,8 +792,8 @@ class Method : Function
         }
 
         // Assinatura
-        result.put(returnType.toString() ~ " " ~ name ~ "(");
-        result.put(parameters.map!(p => p.toString()).join(", "));
+        result.put(returnType._toString() ~ " " ~ name ~ "(");
+        result.put(parameters.map!(p => p._toString()).join(", "));
         result.put(") {\n");
 
         // Corpo
@@ -791,13 +819,13 @@ class EnumDefinition
         string name;
         string value;
 
-        string toString() const
+        string _toString() const
         {
             return value.length > 0 ? name ~ " = " ~ value : name;
         }
     }
 
-    this(string name, Type baseType = Type(TypeKind.Int32))
+    this(string name, Type baseType = new Type(TypeKind.Int32))
     {
         this.name = name;
         this.baseType = baseType;
@@ -815,13 +843,13 @@ class EnumDefinition
         result.put("enum " ~ name);
         if (baseType.kind != TypeKind.Int32)
         {
-            result.put(" : " ~ baseType.toString());
+            result.put(" : " ~ baseType._toString());
         }
         result.put(" {\n");
 
         foreach (i, member; members)
         {
-            result.put("    " ~ member.toString());
+            result.put("    " ~ member._toString());
             if (i < cast(int) members.length - 1)
             {
                 result.put(",");
@@ -886,7 +914,7 @@ class CastExpression : Expression
 
     override string generateD()
     {
-        return "cast(" ~ type.toString() ~ ")" ~ expression.generateD();
+        return "cast(" ~ type._toString() ~ ")" ~ expression.generateD();
     }
 }
 
@@ -930,7 +958,7 @@ class ForeachStatement : Statement
         result ~= "foreach (";
         if (variableType.kind != TypeKind.Void)
         {
-            result ~= variableType.toString() ~ " ";
+            result ~= variableType._toString() ~ " ";
         }
         result ~= variableName ~ "; " ~ iterable.generateD() ~ ")\n";
         result ~= body.generateD(indentLevel);
@@ -1269,9 +1297,9 @@ class NewExpression : Expression
             {
                 args ~= arg.generateD();
             }
-            return format!"new %s(%s)"(type.toString(), args.join(", "));
+            return format!"new %s(%s)"(type._toString(), args.join(", "));
         }
-        return format!"new %s()"(type.toString());
+        return format!"new %s()"(type._toString());
     }
 }
 
@@ -1314,7 +1342,7 @@ class TryStatementCore : Statement
         foreach (catch_; catchClauses)
         {
             result.put(indent(indentLevel) ~ "catch (");
-            result.put(catch_.exceptionType.toString() ~ " " ~ catch_.variableName);
+            result.put(catch_.exceptionType._toString() ~ " " ~ catch_.variableName);
             result.put(")\n");
             result.put(catch_.handler.generateD(indentLevel) ~ "\n");
         }

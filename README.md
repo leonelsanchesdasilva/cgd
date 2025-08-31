@@ -2,7 +2,7 @@
   <img src="docs/assets/logo.png" width="150" alt="cgd logo"/>
 </p>
 
-[![Versão](https://img.shields.io/badge/versão-v0.0.4-blue.svg)](https://github.com/fernandothedev/cgd)
+[![Versão](https://img.shields.io/badge/versão-v0.0.5-blue.svg)](https://github.com/fernandothedev/cgd)
 
 # CGD - Compilador Geral Delégua
 
@@ -98,13 +98,13 @@ Iniciado: 11 de agosto de 2025
 - [X] Lexer básico
   - [X] Lexer completo
 - [X] Parser básico
-  - [ ] Parser completo
+  - [X] Parser completo
 - [X] Analisador semântico básico
   - [ ] Analisador semântico completo
 - [ ] Otimizador
 - [X] Gerador de código D
 - [X] Geração do binário
-- [ ] Tratamento de erros eficiente
+- [X] Tratamento de erros eficiente
 - [ ] Criação de bibliotecas
   - [X] io
   - [ ] math

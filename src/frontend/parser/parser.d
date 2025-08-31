@@ -11,6 +11,7 @@ import frontend.values;
 import frontend.parser.ftype_info;
 import frontend.parser.ast;
 import frontend.parser.parse_type;
+import error;
 
 enum Precedence
 {
@@ -29,8 +30,8 @@ enum Precedence
     PRODUCT = 13,
     EXPONENT = 14,
     PREFIX = 15,
-    POSTFIX = 16, // Nova precedência para operadores postfix
-    CALL = 17, // Ajustado para ser maior que POSTFIX
+    POSTFIX = 16,
+    CALL = 17,
 }
 
 class Parser
@@ -38,6 +39,7 @@ class Parser
 private:
     Token[] tokens;
     ulong pos = 0;
+    DiagnosticError error;
 
     Stmt parsePrefix()
     {
@@ -83,6 +85,8 @@ private:
             return this.parseForStatement();
         case TokenType.ENQUANTO:
             return this.parseWhileStatement();
+        case TokenType.FAZER:
+            return this.parseDoWhileStatement();
         case TokenType.ESCOLHA:
             return this.parseSwitchStatement();
         case TokenType.QUEBRAR:
@@ -107,14 +111,9 @@ private:
                 return this.parseCallExpression();
             if (this.peek().kind == TokenType.EQUALS)
                 return this.parseAssignmentDeclaration();
-
             auto identifier = new Identifier(token.value.get!string, token.loc);
-
             if (this.peek().kind == TokenType.DOT)
-            {
                 return this.parseMemberCallExpression(identifier);
-            }
-
             return identifier;
 
         case TokenType.BIT_NOT:
@@ -123,6 +122,8 @@ private:
         case TokenType.INCREMENT:
             if (this.peek().kind != TokenType.IDENTIFIER)
             {
+                error.addError(Diagnostic("Operador '++' prefix requer um identificador válido.", token
+                        .loc));
                 throw new Exception("Operador '++' prefix requer um identificador válido.");
             }
             Stmt operand = this.parseExpression(Precedence.POSTFIX);
@@ -131,14 +132,50 @@ private:
         case TokenType.DECREMENT:
             if (this.peek().kind != TokenType.IDENTIFIER)
             {
+                error.addError(Diagnostic("Operador '--' prefix requer um identificador válido.", token
+                        .loc));
                 throw new Exception("Operador '--' prefix requer um identificador válido.");
             }
             Stmt operand = this.parseExpression(Precedence.POSTFIX);
             return new UnaryExpr("--", operand, this.makeLoc(token.loc, operand.loc), false);
 
+        case TokenType.LBRACKET:
+            return this.parseArrayLiteral();
+
         default:
-            throw new Exception("Noo prefix parse function for " ~ to!string(token));
+            error.addError(Diagnostic("Nenhuma função de análise de prefixo para isso.", token
+                    .loc));
+            throw new Exception("No prefix parse function for " ~ to!string(token.kind));
         }
+    }
+
+    Stmt parseArrayLiteral()
+    {
+        Loc start = this.previous().loc;
+        Stmt[] elements;
+        Tuple!(bool, FTypeInfo) type = Tuple!(bool, FTypeInfo)(false, createTypeInfo("void"));
+        while (this.peek().kind != TokenType.RBRACKET && !this.isAtEnd())
+        {
+            // primeiro argumento
+            elements ~= this.parseExpression(Precedence.LOWEST);
+            if (!type[0])
+            {
+                type = tuple(true, elements[0].type);
+            }
+            else if (elements[$ - 1].type.baseType != type[1].baseType)
+            {
+                // Erro
+                this.error.addError(Diagnostic(format("O vetor foi declarado com tipo '%s'.", cast(
+                        string) type[1]
+                        .baseType), start));
+                throw new Exception(format("O vetor foi declarado com tipo '%s'.", cast(string) type[1]
+                        .baseType));
+            }
+            this.match([TokenType.COMMA]);
+        }
+        Loc end = this.consume(TokenType.RBRACKET, "Esperado ']' após a declaração do vetor.")
+            .loc;
+        return new ArrayLiteral(elements, type[1], this.makeLoc(start, end));
     }
 
     Stmt parseNewExpression()
@@ -252,12 +289,18 @@ private:
                 }
                 else
                 {
+                    error.addError(Diagnostic(
+                            "Esperado ':' para propriedade ou '(' para método após identificador na classe.", this
+                            .peek().loc));
                     throw new Exception(
                         "Esperado ':' para propriedade ou '(' para método após identificador na classe.");
                 }
             }
             else
             {
+                error.addError(Diagnostic(
+                        "Esperado identificador, 'construtor', 'destrutor', 'publico' ou 'privado' dentro da classe.",
+                        this.peek().loc));
                 throw new Exception(
                     "Esperado identificador, 'construtor', 'destrutor', 'publico' ou 'privado' dentro da classe.");
             }
@@ -431,12 +474,16 @@ private:
             {
                 if (defaultCase !is null)
                 {
+                    error.addError(Diagnostic(
+                            "Apenas um caso 'padrão' é permitido por 'escolha'.", start));
                     throw new Exception("Apenas um caso 'padrão' é permitido por 'escolha'.");
                 }
                 defaultCase = this.parseDefaultStatement();
             }
             else
             {
+                error.addError(Diagnostic(
+                        "Esperava-se 'caso' ou 'padrão' dentro de 'escolha'.", this.peek().loc));
                 throw new Exception("Esperava-se 'caso' ou 'padrão' dentro de 'escolha'.");
             }
         }
@@ -532,6 +579,29 @@ private:
                 .loc);
     }
 
+    Stmt parseDoWhileStatement()
+    {
+        Loc start = this.previous().loc;
+
+        this.consume(TokenType.LBRACE, "Esperava-se '{' após 'fazer'.");
+        Stmt[] body;
+
+        while (!this.check(TokenType.RBRACE) && !this.isAtEnd())
+        {
+            body ~= this.parseExpression(Precedence.LOWEST);
+        }
+
+        Loc end = this.consume(
+            TokenType.RBRACE,
+            "Esperava-se '}' após o corpo do 'enquanto'.",
+        ).loc;
+
+        this.consume(TokenType.ENQUANTO, "Esperava-se 'enquanto' após o corpo do 'fazer'.");
+        Stmt cond = this.parseExpression(Precedence.LOWEST);
+
+        return new DoWhileStatement(cond, body, this.makeLoc(start, end));
+    }
+
     Stmt parseWhileStatement()
     {
         Loc start = this.previous().loc;
@@ -560,9 +630,13 @@ private:
 
         if (_init.kind != NodeType.VariableDeclaration && _init.kind != NodeType
             .AssignmentDeclaration)
+        {
+            error.addError(Diagnostic(
+                    "É esperado uma declaração ou redeclaração de variavel no inicio do 'para'.", _init
+                    .loc));
             throw new Exception(
                 "É esperado uma declaração ou redeclaração de variavel no inicio do 'para'.");
-
+        }
         this.consume(TokenType.SEMICOLON, "Esperava-se ';' antes da condição do 'para'.");
         Stmt cond = this.parseExpression(Precedence.LOWEST);
 
@@ -753,6 +827,9 @@ private:
             }
             else if (this.peek().kind != TokenType.RPAREN)
             {
+                error.addError(Diagnostic(
+                        "Esperava-se ',' ou ')' após o(s) argumento(s).", this.peek()
+                        .loc));
                 throw new Exception("Esperava-se ',' ou ')' após o(s) argumento(s).");
             }
         }
@@ -834,6 +911,9 @@ private:
         {
             if (declaredType.baseType == TypesNative.NULL)
             {
+                error.addError(Diagnostic(
+                        "Tipo deve ser especificado para variáveis não inicializadas.", firstIdToken
+                        .loc));
                 throw new Exception(
                     "Tipo deve ser especificado para variáveis não inicializadas.");
             }
@@ -872,6 +952,13 @@ private:
 
             if (ids.length != values.length)
             {
+                error.addError(Diagnostic(
+                        format(
+                        "Número de identificadores (%d) não corresponde ao número de valores (%d).",
+                        ids.length,
+                        values.length
+                    ), firstIdToken
+                        .loc));
                 throw new Exception(format(
                         "Número de identificadores (%d) não corresponde ao número de valores (%d).",
                         ids.length,
@@ -1170,8 +1257,9 @@ private:
     }
 
 public:
-    this(Token[] tokens = [])
+    this(Token[] tokens = [], DiagnosticError e)
     {
+        this.error = e;
         this.tokens = tokens;
     }
 
@@ -1198,8 +1286,6 @@ public:
         }
         catch (Exception e)
         {
-
-            writeln("Erro:", e.msg);
             throw e;
         }
 
@@ -1261,8 +1347,7 @@ private:
     {
         if (this.check(expected))
             return this.advance();
-        const token = this.peek();
-
+        error.addError(Diagnostic(message, this.peek().loc));
         throw new Exception(format(`Erro de parsing: %s`, message));
     }
 

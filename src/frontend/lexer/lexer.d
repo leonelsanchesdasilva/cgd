@@ -3,10 +3,11 @@ module frontend.lexer.lexer;
 import std.variant;
 import std.stdio;
 import std.conv;
+import std.array;
 import std.string;
 import std.ascii : toLower;
-
 import frontend.lexer.token;
+import error;
 
 class Lexer
 {
@@ -14,6 +15,7 @@ private:
     string source;
     string file;
     string dir;
+    DiagnosticError error;
 
     ulong line = 1;
     ulong offset = 0;
@@ -108,10 +110,38 @@ private:
         );
     }
 
-    Token createToken(TokenType kind, Variant value, ulong skipChars = 1)
+    void reportError(
+        string message,
+        Loc loc,
+        string suggestion = "",
+    )
+    {
+        error.addError(Diagnostic(message, loc, [
+                    error.makeSuggestion(
+                    suggestion)
+                ]));
+        return;
+    }
+
+    void reportUnexpectedChar(char ch)
+    {
+        error.addError(
+            Diagnostic(format("Caractere inesperado '%c'", ch),
+                this.getLocation(this.start, this.start + 1),
+                [
+                    error.makeSuggestion(
+                    "Remova o caractere e verifique se o erro não persiste mais.",
+                    error.getLineText(this.line, this.file).replace(ch, ""),
+                    ),
+                ])
+        );
+    }
+
+    Token createToken(TokenType kind, Variant value, ulong skipChars = 1, ulong startAdd = 0)
     {
         auto valueLength = to!string(value).length;
-        Token token = Token(kind, value, this.getLocation(this.start, cast(ulong) this.start + valueLength));
+        ulong st = this.start + startAdd;
+        Token token = Token(kind, value, this.getLocation(st, cast(ulong) st + valueLength));
         this.tokens ~= token;
         this.offset += skipChars;
         return token;
@@ -133,7 +163,9 @@ private:
 
         if (hexDigits.length == 0)
         {
-            throw new Exception("Invalid hexadecimal number: missing digits after '0x'");
+            this.reportError("Número hexadecimal inválido: dígitos ausentes após '0x'", this.getLocation(startPos, this
+                    .offset));
+            return;
         }
 
         auto fullHex = "0x" ~ hexDigits;
@@ -154,7 +186,9 @@ private:
 
         if (octalDigits.length == 0)
         {
-            throw new Exception("Invalid octal number: missing digits after '0o'");
+            this.reportError("Número octal inválido: dígitos ausentes após '0o'", this.getLocation(startPos, this
+                    .offset));
+            return;
         }
 
         auto fullOctal = "0o" ~ octalDigits;
@@ -175,7 +209,9 @@ private:
 
         if (binaryDigits.length == 0)
         {
-            throw new Exception("Invalid binary number: missing digits after '0b'");
+            this.reportError("Número binário inválido: dígitos ausentes após '0b'", this.getLocation(startPos, this
+                    .offset));
+            return;
         }
 
         auto fullBinary = "0b" ~ binaryDigits;
@@ -192,13 +228,23 @@ private:
     bool lexString()
     {
         string value = ""; // Buffer
+        ulong startLine = this.line;
+        ulong startPos = this.start;
+        char openingQuote = this.source[this.offset];
         this.offset++; // Skip opening quote
 
-        while (
-            this.offset < this.source.length && this.source[this.offset] != '"' && this.source[this.offset] != '\''
-            )
+        while (this.offset < this.source.length && this.source[this.offset] != openingQuote)
         {
             char ch = this.source[this.offset];
+
+            if (ch == '\n')
+            {
+                this.line += 1;
+                value ~= ch;
+                this.offset++;
+                this.lineOffset = this.offset;
+                continue;
+            }
 
             // Handle escape sequences
             if (ch == '\\')
@@ -208,31 +254,39 @@ private:
                     break;
 
                 value ~= this.getEscapedChar(this.source[this.offset]);
+                this.offset++;
             }
             else
             {
                 value ~= ch;
+                this.offset++;
             }
-
-            this.offset++;
         }
 
         // Check for unclosed string
-        if (this.offset >= this.source.length || (this.source[this.offset] != '"' && this.source[this.offset] != '\''))
+        if (this.offset >= this.source.length || this.source[this.offset] != openingQuote)
         {
-            // this.reportError(
-            //     this.getLocation(startPos, this.start + value.length + 1),
-            //     "String not closed",
-            //     "Add '\"' at the end of the desired string.",
-            // );
-            throw new Exception("String not closed");
+            ulong errorStart = startPos;
+            ulong errorEnd = this.offset - this.lineOffset;
+
+            Loc loc = this.getLocation(errorStart, errorEnd);
+            loc.line = startLine;
+
+            this.reportError(
+                "A string não foi fechada",
+                loc,
+                format("Adicione '%c' ao final da string.", openingQuote)
+            );
+            return false;
         }
 
-        this.createToken(
+        this.offset++;
+        this.createTokenWithLocation(
             TokenType.STRING,
             Variant(value),
+            startPos,
+            this.offset - startPos - this.lineOffset + startPos
         );
-
         return true;
     }
 
@@ -259,6 +313,7 @@ private:
 
     bool lexComment()
     {
+        ulong startPos = this.offset;
         this.offset++; // Skip the first '/'
 
         if (this.source[this.offset] == '/')
@@ -293,7 +348,9 @@ private:
                 this.offset++;
             }
             // Error
-            throw new Exception("Unclosed body comment");
+            this.reportError("Corpo do comentário não foi fechado.", this.getLocation(startPos, this
+                    .offset));
+            return false;
         }
 
         this.offset--;
@@ -303,11 +360,11 @@ private:
     void lexIdentifier()
     {
         const ulong startOffset = this.offset;
-
         while (this.offset < this.source.length)
         {
             char c = this.source[this.offset];
-            if (!(c in this.ALPHA_CHARS) && !(c in this.DIGIT_CHARS))
+            if (!(c in this.ALPHA_CHARS) && !(
+                    c in this.DIGIT_CHARS))
             {
                 break;
             }
@@ -315,7 +372,8 @@ private:
         }
 
         string identifier = this.source[startOffset .. this.offset];
-        TokenType tokenType = TokenType.IDENTIFIER;
+        TokenType tokenType = TokenType
+            .IDENTIFIER;
         if (auto keywordType = identifier in keywords)
         {
             tokenType = *keywordType;
@@ -341,8 +399,8 @@ private:
     {
         if (this.offset + 1 >= this.source.length)
             return false;
-
-        string twoChars = this.source[this.offset .. this.offset + 2];
+        string twoChars = this
+            .source[this.offset .. this.offset + 2];
 
         if (auto tokenType = twoChars in MULTI_CHAR_TOKENS)
         {
@@ -355,7 +413,8 @@ private:
     string consumeDigits()
     {
         ulong _start = this.offset;
-        while (this.offset < this.source.length && this.source[this.offset] in this.DIGIT_CHARS)
+        while (this.offset < this.source.length && this
+            .source[this.offset] in this.DIGIT_CHARS)
         {
             this.offset++;
         }
@@ -365,7 +424,8 @@ private:
     string consumeHexDigits()
     {
         ulong _start = this.offset;
-        while (this.offset < this.source.length && this.source[this.offset] in this.HEX_CHARS)
+        while (this.offset < this.source.length && this
+            .source[this.offset] in this.HEX_CHARS)
         {
             this.offset++;
         }
@@ -375,7 +435,9 @@ private:
     string consumeOctalDigits()
     {
         ulong _start = this.offset;
-        while (this.offset < this.source.length && this.source[this.offset] in this.OCTAL_CHARS)
+        while (
+            this.offset < this.source.length && this
+            .source[this.offset] in this.OCTAL_CHARS)
         {
             this.offset++;
         }
@@ -385,11 +447,14 @@ private:
     string consumeBinaryDigits()
     {
         ulong _start = this.offset;
-        while (this.offset < this.source.length && this.source[this.offset] in this.BINARY_CHARS)
+        while (this.offset < this.source.length && this
+            .source[this.offset] in this
+            .BINARY_CHARS)
         {
             this.offset++;
         }
-        return this.source[_start .. this.offset];
+        return this
+            .source[_start .. this.offset];
     }
 
     void lexNumber()
@@ -397,10 +462,12 @@ private:
         ulong startPos = this.offset;
 
         if (
-            this.source[this.offset] == '0' && this.offset + 1 < this.source.length
+            this.source[this.offset] == '0' && this.offset + 1 < this
+            .source.length
             )
         {
-            const prefix = toLower(this.source[this.offset + 1]);
+            const prefix = toLower(
+                this.source[this.offset + 1]);
 
             // Hexadecimal (0x or 0X)
             if (prefix == 'x')
@@ -419,7 +486,8 @@ private:
             // Binary (0b or 0B)
             if (prefix == 'b')
             {
-                this.lexBinaryWithPrefix(startPos);
+                this.lexBinaryWithPrefix(
+                    startPos);
                 return;
             }
         }
@@ -427,7 +495,8 @@ private:
         string number = this.consumeDigits();
 
         // Handle range operator (e.g., 123..456)
-        if (this.source[0 .. this.offset] == "..")
+        if (
+            this.source[0 .. this.offset] == "..")
         {
             this.createTokenWithLocation(
                 TokenType.INT,
@@ -435,15 +504,20 @@ private:
                 startPos,
                 number.length,
             );
-            this.createToken(TokenType.RANGE, Variant(".."), 2);
+            this.createToken(TokenType.RANGE, Variant(
+                    ".."), 2);
             return;
         }
 
         // Handle floating point numbers
-        if (this.offset < this.source.length && this.source[this.offset] == '.')
+        if (this.offset < this.source.length && this
+            .source[this.offset] == '.')
         {
-            const nextChar = this.source[this.offset + 1];
-            if (nextChar in this.DIGIT_CHARS)
+            const nextChar = this
+                .source[this.offset + 1];
+            if (
+                nextChar in this
+                .DIGIT_CHARS)
             {
                 number ~= ".";
                 this.offset++;
@@ -462,7 +536,9 @@ private:
         // Handle binary literals with suffix (e.g., 101b)
         if (
             this.offset < this.source.length &&
-            toLower(this.source[this.offset]) == 'b'
+            toLower(
+                this
+                .source[this.offset]) == 'b'
             )
         {
             this.offset++;
@@ -486,38 +562,52 @@ private:
     }
 
 public:
-    this(string file, string source, string dir)
+    this(string file, string source, string dir, DiagnosticError e)
     {
         this.file = file;
         this.source = source;
         this.dir = dir;
+        this.error = e;
     }
 
-    Token[] tokenize(bool ignoreNewLine = false)
+    Token[] tokenize(
+        bool ignoreNewLine = false)
     {
         try
         {
-            ulong sourceLength = cast(ulong) this.source.length;
+            ulong sourceLength = cast(
+                ulong) this.source
+                .length;
 
-            while (this.offset < sourceLength)
+            while (
+                this.offset < sourceLength)
             {
-                this.start = this.offset - this.lineOffset;
-                char c = this.source[this.offset];
+                this.start = this.offset - this
+                    .lineOffset;
+                char c = this
+                    .source[this
+                        .offset];
 
                 if (c == '\n')
                 {
-                    if (ignoreNewLine)
+                    if (
+                        ignoreNewLine)
                     {
-                        this.offset++;
+                        this
+                            .offset++;
                         continue;
                     }
                     this.line++;
-                    this.offset++;
-                    this.lineOffset = this.offset;
+                    this
+                        .offset++;
+                    this.lineOffset = this
+                        .offset;
                     continue;
                 }
 
-                if (c in this.WHITESPACE_CHARS)
+                if (
+                    c in this
+                    .WHITESPACE_CHARS)
                 {
                     this.offset++;
                     continue;
@@ -525,14 +615,18 @@ public:
 
                 if (c == '/' && this.offset + 1 < sourceLength)
                 {
-                    char nextChar = this.source[this.offset + 1];
+                    char nextChar = this
+                        .source[this.offset + 1];
                     if (nextChar == '/' || nextChar == '*')
                     {
-                        if (!this.lexComment())
+                        if (
+                            !this.lexComment())
                         {
-                            if (!this.lexSingleCharToken())
+                            if (!this
+                                .lexSingleCharToken())
                             {
-                                throw new Exception("Unexpected character: " ~ c);
+                                this.reportUnexpectedChar(
+                                    c);
                             }
                         }
                         continue;
@@ -542,43 +636,53 @@ public:
                 // Handle string literals
                 if (c == '"' || c == '\'')
                 {
-                    if (!this.lexString())
+                    if (
+                        !this.lexString())
                         return null; // Error
                     continue;
                 }
 
-                if (c in this.ALPHA_CHARS)
+                if (
+                    c in this
+                    .ALPHA_CHARS)
                 {
                     this.lexIdentifier();
                     continue;
                 }
 
-                if (c in this.DIGIT_CHARS)
+                if (
+                    c in this
+                    .DIGIT_CHARS)
                 {
                     this.lexNumber();
                     continue;
                 }
 
-                if (this.lexMultiCharToken())
+                if (
+                    this.lexMultiCharToken())
                 {
                     continue;
                 }
 
-                if (this.lexSingleCharToken())
+                if (
+                    this.lexSingleCharToken())
                 {
                     continue;
                 }
 
-                throw new Exception(
-                    "Unexpected character: '" ~ c ~ "' at line " ~ to!string(this.line));
+                this.reportUnexpectedChar(
+                    c);
+                this.offset++; // skip
+                continue;
             }
 
-            this.createToken(TokenType.EOF, Variant("\0"), 0);
+            this.createToken(TokenType.EOF, Variant(
+                    "\0"), 0);
             return this.tokens;
         }
         catch (Exception e)
         {
-            writeln("Lexer error: ", e.msg);
+            // ignore
             throw e;
         }
     }

@@ -113,6 +113,7 @@ private:
         case "lógica":
             return TypesNative.BOOL;
         default:
+            return TypesNative.CLASS;
             throw new Exception("Unknown native type: " ~ value);
         }
     }

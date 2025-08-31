@@ -100,6 +100,21 @@ extern (D) void escreva(...)
             char[] value = va_arg!(char[])(argptr);
             write(value);
         }
+        else if (ti == typeid(long[]))
+        {
+            long[] value = va_arg!(long[])(argptr);
+            write(value);
+        }
+        else if (ti == typeid(string[]))
+        {
+            string[] value = va_arg!(string[])(argptr);
+            write(value);
+        }
+        else if (ti == typeid(double[]))
+        {
+            double[] value = va_arg!(double[])(argptr);
+            write(value);
+        }
         else if (ti == typeid(wstring))
         {
             wstring value = va_arg!(wstring)(argptr);
@@ -211,6 +226,21 @@ extern (D) void escrevaln(...)
         else if (ti == typeid(char[]))
         {
             char[] value = va_arg!(char[])(argptr);
+            write(value);
+        }
+        else if (ti == typeid(long[]))
+        {
+            long[] value = va_arg!(long[])(argptr);
+            write(value);
+        }
+        else if (ti == typeid(string[]))
+        {
+            string[] value = va_arg!(string[])(argptr);
+            write(value);
+        }
+        else if (ti == typeid(double[]))
+        {
+            double[] value = va_arg!(double[])(argptr);
             write(value);
         }
         else if (ti == typeid(wstring))
