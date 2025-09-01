@@ -147,8 +147,8 @@ class TypeChecker
             "double": ["int", "i32", "float", "i64", "long", "bool", "string"],
             "binary": ["int", "i32", "i64", "long"],
             "i64": ["float", "double", "bool"],
-            "long": ["float", "double", "bool"],
-            "string": ["const char", "char", "binary"],
+            "long": ["float", "double", "bool", "string"],
+            "string": ["const char", "char", "long", "double"],
             "bool": ["int", "i32", "long", "float", "double", "string", "i64"]
         ];
 

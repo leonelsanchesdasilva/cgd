@@ -110,8 +110,6 @@ private:
 
             // Define como ID temporariamente
         case TokenType.ARGS:
-            return new Identifier(token.value.get!string, token.loc);
-
             // Others
         case TokenType.IDENTIFIER:
             if (this.peek()
@@ -917,13 +915,10 @@ private:
         Token calle = this.previous();
         this.advance(); // skip '('
         Stmt[] args = [];
-        if (!this.check(TokenType.RPAREN))
+        while (this.peek().kind != TokenType.RPAREN && !this.isAtEnd())
         {
-            do
-            {
-                args ~= this.parseExpression(Precedence.LOWEST);
-            }
-            while (this.match([TokenType.COMMA]));
+            args ~= this.parseExpression(Precedence.LOWEST);
+            this.match([TokenType.COMMA]);
         }
         this.consume(TokenType.RPAREN, "Esperava-se ')' após os argumentos.");
         return new CallExpr(new Identifier(calle.value.get!string, calle.loc), args, calle.loc);
@@ -958,7 +953,7 @@ private:
             }
         }
 
-        FTypeInfo declaredType = createTypeInfo("null");
+        FTypeInfo declaredType = createTypeInfo("void");
         if (this.match([TokenType.COLON]))
         {
             Token[] typeTokens;

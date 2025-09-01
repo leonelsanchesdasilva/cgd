@@ -1038,6 +1038,7 @@ private:
     {
         auto varName = node.id.value.get!string;
         Expression expr = generate(node.value.get!Stmt).get!Expression;
+        expr = genCastTo(expr, node.value.get!Stmt.type, lookupSymbol(varName).type);
         auto ass = new AssignmentStatement(varName, expr);
         return ass;
     }
@@ -1335,6 +1336,18 @@ private:
         return null;
     }
 
+    Expression genCastTo(Expression expr, FTypeInfo de, FTypeInfo para)
+    {
+        if (de.baseType != para.baseType && !para.isArray)
+        {
+            codegen.currentModule.addImport("std.conv");
+            expr = new CastExpression(
+                getType(para), expr, true); // <- Aqui: para, não de
+        }
+
+        return expr;
+    }
+
     Statement genVariableDeclaration(VariableDeclaration node)
     {
         auto varName = node.id.value.get!string;
@@ -1342,6 +1355,7 @@ private:
         addSymbol(varName, node.type, false);
 
         Expression expr = createInitializerExpression(node);
+        expr = genCastTo(expr, node.value.get!Stmt.type, node.type);
 
         auto var = new VariableDeclarationCore(
             expr.type,

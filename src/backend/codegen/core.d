@@ -925,16 +925,20 @@ class IndexExpressionAssignment : Expression
 class CastExpression : Expression
 {
     Expression expression;
+    bool to;
 
-    this(Type targetType, Expression expression)
+    this(Type targetType, Expression expression, bool to = false)
     {
         super(targetType);
         this.expression = expression;
+        this.to = to;
     }
 
     override string generateD()
     {
-        return "cast(" ~ type._toString() ~ ")" ~ expression.generateD();
+        if (!to)
+            return "cast(" ~ type._toString() ~ ")" ~ expression.generateD();
+        return "to!" ~ type._toString() ~ "(" ~ expression.generateD() ~ ")";
     }
 }
 

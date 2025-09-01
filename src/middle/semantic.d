@@ -37,7 +37,7 @@ public:
 
         // TODO: Criar uma classe para setar os módulos|libs
         // Vamos adicionar isso aqui temporariamente
-        StdLibModuleBuilder mod = new StdLibModuleBuilder("io")
+        StdLibModuleBuilder mod_io = new StdLibModuleBuilder("io")
             .defineFunction("escreva")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
@@ -47,7 +47,7 @@ public:
             .done()
 
             .defineFunction("leia")
-            .returns(createTypeInfo(TypesNative.NULL))
+            .returns(createTypeInfo(TypesNative.STRING))
             .customTargetType(createTypeInfo("string"))
             .withParams(createTypeInfo("string"))
             .libraryName("io_leia")
@@ -63,7 +63,17 @@ public:
             .generateDExternWithPragma()
             .done();
 
-        this.stdLibs["io"] = mod.moduleData;
+        StdLibModuleBuilder mod_type = new StdLibModuleBuilder("type")
+            .defineFunction("sdecimal")
+            .returns(createTypeInfo(TypesNative.FLOAT))
+            .customTargetType(createTypeInfo("double"))
+            .withParams(createTypeInfo("string"))
+            .libraryName("type_sdecimal")
+            .generateDExternWithPragma()
+            .done();
+
+        this.stdLibs["io"] = mod_io.moduleData;
+        this.stdLibs["type"] = mod_type.moduleData;
     }
 
     Program semantic(Program program)
@@ -736,6 +746,15 @@ private:
             {
                 finalType = node.commonType;
 
+                if (analyzedValue.type.baseType == TypesNative.VOID)
+                    analyzedValue.type = finalType;
+
+                if (node.commonType.baseType == TypesNative.VOID)
+                {
+                    node.commonType = analyzedValue.type;
+                    finalType = node.commonType;
+                }
+
                 string valueTypeStr = this.typeChecker.getTypeStringFromNative(
                     analyzedValue.type.baseType);
                 string commonTypeStr = this.typeChecker.getTypeStringFromNative(
@@ -859,6 +878,12 @@ private:
 
         node.id = cast(Identifier) this.analyzeIdentifier(node.id);
         node.value = this.analyzeNode(node.value.get!Stmt);
+
+        if (node.value.get!Stmt.type.baseType == TypesNative.VOID)
+            node.value.get!Stmt.type = node.type;
+
+        if (node.type.baseType == TypesNative.VOID)
+            node.type = node.value.get!Stmt.type;
 
         return node;
     }
@@ -1224,10 +1249,14 @@ private:
         Stmt analyzedValue = this.analyzeNode(node.value.get!Stmt);
         node.value = analyzedValue;
 
+        if (node.value.get!Stmt.type.baseType == TypesNative.VOID)
+            node.value.get!Stmt.type = node.type;
+
+        if (node.type.baseType == TypesNative.VOID)
+            node.type = node.value.get!Stmt.type;
+
         // TODO: validar os tipos
 
-        string baseType = this.typeChecker.getTypeStringFromNative(analyzedValue.type.baseType);
-        node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
         node.type.className = analyzedValue.type.className;
         node.type.isArray = analyzedValue.type.isArray;
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
