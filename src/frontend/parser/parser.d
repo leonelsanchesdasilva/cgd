@@ -108,6 +108,10 @@ private:
                         .loc));
             return new ThisExpr(token.loc);
 
+            // Define como ID temporariamente
+        case TokenType.ARGS:
+            return new Identifier(token.value.get!string, token.loc);
+
             // Others
         case TokenType.IDENTIFIER:
             if (this.peek()

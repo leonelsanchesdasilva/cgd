@@ -77,7 +77,10 @@ class Type
         case TypeKind.String:
             return "string";
         case TypeKind.Array:
-            return elementType ? elementType._toString() ~ "[]" : "void[]";
+            Type element = cast(Type) elementType;
+            if (elementType.kind == TypeKind.Array)
+                element = cast(Type) elementType.elementType;
+            return elementType ? element._toString() ~ "[]" : "void[]";
         case TypeKind.Pointer:
             return elementType ? elementType._toString() ~ "*" : "void*";
         case TypeKind.Struct:

@@ -1145,6 +1145,14 @@ private:
         string id = node.value.get!string;
         SymbolInfo* symbol = this.lookupSymbol(id);
 
+        // TODO: implementar direito
+        if (id == "ARGS" && !symbol)
+        {
+            this.addSymbol(id, SymbolInfo(id, createArrayType(TypesNative.STRING), false, true, node
+                    .loc));
+            symbol = this.lookupSymbol(id); // seta novamente
+        }
+
         if (!symbol)
         {
             throw new Exception(
