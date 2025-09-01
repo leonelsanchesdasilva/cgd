@@ -48,11 +48,13 @@ private:
     StructDefinition currentClass;
     string[string] classTypes; // Mapeia nomes de classes para tipos
     bool[string] mangles;
+    bool isARGS = false;
 
     Type getType(FTypeInfo t)
     {
-        if (auto cached = t.baseType in typeCache)
-            return *cached;
+        if (!t.isArray)
+            if (Type* cached = t.baseType in typeCache)
+                return *cached;
 
         Type result;
         switch (t.baseType)
@@ -76,21 +78,17 @@ private:
         default:
             // Verificar se é um tipo de classe customizado
             if (t.className in classTypes)
-            {
                 result = new Type(TypeKind.Custom, t.className);
-            }
             else
-            {
                 throw new Exception(format("Tipo desconhecido '%s'.", t.baseType));
-            }
         }
+
+        if (!t.isArray)
+            typeCache[t.baseType] = result;
 
         if (t.isArray)
-        {
             result = new Type(TypeKind.Array, cast(string) t.baseType, result);
-        }
 
-        typeCache[t.baseType] = result;
         return result;
     }
 
@@ -143,7 +141,7 @@ private:
             return symbol;
         }
 
-        writeln("DEBUG: Símbolo não encontrado: ", name);
+        // writeln("DEBUG: Símbolo não encontrado: ", name);
         return null;
     }
 
@@ -1114,6 +1112,12 @@ private:
         auto name = node.value.get!string;
         Type type;
 
+        if (name == "ARGS" && lookupSymbol(name) is null)
+        {
+            addSymbol(name, createArrayType(TypesNative.STRING));
+            isARGS = true;
+        }
+
         if (node.type.baseType == TypesNative.CLASS)
         {
             // node.value = Variant("this"); // vamos substituir o 'isto' para 'this'
@@ -1403,6 +1407,11 @@ public:
     {
         codegen.currentModule.addFunction(mainFunc);
         this.genProgram(this.program);
+
+        if (isARGS)
+            codegen.currentModule.functions[0].parameters = [
+                Parameter(getType(createArrayType(TypesNative.STRING)), "ARGS")
+            ];
 
         // Adicionando as bibliotecas
         if (this.semantic.availableStdFunctions.length > 0)

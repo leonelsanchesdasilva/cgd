@@ -45,6 +45,7 @@ enum TokenType
     PROTEGIDO, // protegido
     CONSTRUTOR, // construtor
     DESTRUTOR, // destrutor
+    ARGS, // ARGS
 
     // Future Reserved Words
     ENUM, // enum
@@ -202,6 +203,7 @@ shared static this()
     keywords["protegido"] = TokenType.PROTEGIDO;
     keywords["construtor"] = TokenType.CONSTRUTOR;
     keywords["destrutor"] = TokenType.DESTRUTOR;
+    keywords["ARGS"] = TokenType.ARGS;
 
     // Future Reserved Words
     keywords["enum"] = TokenType.ENUM;
