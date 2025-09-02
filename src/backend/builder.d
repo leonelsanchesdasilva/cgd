@@ -613,24 +613,21 @@ private:
         return null;
     }
 
-    Expression genPrimitive(MemberCallExpr node, Expression[] args = [
-        ])
+    Expression genPrimitive(MemberCallExpr node, Expression[] args, FTypeInfo[] _args)
     {
         // vamos traduzir pra uma chamada de função
         PrimitiveProperty fn;
 
         if (node.object.type.isArray)
         {
-            fn = semantic.primitive.get("array")
-                .properties[node.member.value.get!string];
+            fn = semantic.primitive.get("array", _args);
             if (fn.args[0].isRef)
                 node.object.type.isRef = true;
             fn.args[0] = node.object.type; // atualiza o primeiro argumento pro tipo atual
             // fn.args[0].baseType = TypesNative.T;
         }
         else
-            fn = semantic.primitive.get(cast(string) node.object.type.baseType)
-                .properties[node.member.value.get!string];
+            fn = semantic.primitive.get(cast(string) node.object.type.baseType, _args);
 
         if (fn.mangle !in mangles)
         {
@@ -648,6 +645,7 @@ private:
         string type = cast(string) node.object.type.baseType; // a esquerda do ponto
         GenerationResult obj = generate(node.object);
         Expression[] args;
+        FTypeInfo[] _args = node.args.map!(x => x.type).array;
 
         if (node.object.type.isArray)
             type = "array";
@@ -656,19 +654,19 @@ private:
         {
             foreach (arg; node.args)
                 args ~= asExpression(generate(arg));
-            if (semantic.primitive.exists(type))
+            if (semantic.primitive.exists(type, _args))
             {
                 args = asExpression(obj) ~ args;
-                return genPrimitive(node, args);
+                return genPrimitive(node, args, _args);
             }
             return new MethodCallExpression(getType(node.type), objectExpr, memberName, args);
         }
         else
         {
-            if (semantic.primitive.exists(type))
+            if (semantic.primitive.exists(type, _args))
             {
                 args = asExpression(obj) ~ args;
-                return genPrimitive(node, args);
+                return genPrimitive(node, args, _args);
             }
             return new MemberAccessExpression(getType(node.type), objectExpr, memberName);
         }

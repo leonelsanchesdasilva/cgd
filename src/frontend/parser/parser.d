@@ -76,6 +76,10 @@ private:
             Stmt operand = this.parseExpression(Precedence.LOWEST);
             return new UnaryExpr("+", operand, this.makeLoc(token.loc, operand.loc));
 
+        case TokenType.BANG:
+            Stmt operand = this.parseExpression(Precedence.LOWEST);
+            return new UnaryExpr("!", operand, this.makeLoc(token.loc, operand.loc));
+
             // Keywords
         case TokenType.VAR:
             return parseVarDeclaration();

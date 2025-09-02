@@ -21,19 +21,6 @@ struct PrimitiveProperty
 
     string generateD()
     {
-        /*
-        string pragmaStr = "";
-        if (this.func.libraryName.length > 0)
-        {
-            pragmaStr = "pragma(mangle, \"" ~ this.func.libraryName ~ "\")\n";
-        }
-
-        this.func.ir = pragmaStr ~ "extern(" ~ this.func.linkage ~ ") " ~
-            returnType ~ " " ~ fnName ~ "(" ~ paramList ~ ");";
-
-        pragma(mangle, "io_escrevaln")
-        extern(D) void escrevaln(...);
-        */
         string code = format("pragma(mangle, \"%s\")\n", mangle);
         string args_;
         for (long i; i < args.length; i++)
@@ -56,7 +43,7 @@ struct PrimitiveProperty
 struct Primitive
 {
     string name; // string, ...
-    PrimitiveProperty[string] properties; // PrimitiveProperty[...]
+    PrimitiveProperty[] properties; // OverloadedPrimitive[...]
 }
 
 class StdPrimitive
@@ -67,15 +54,15 @@ public:
     this()
     {
         // String
-        PrimitiveProperty[string] str_properties;
-        str_properties["tamanho"] = PrimitiveProperty("tamanho", createTypeInfo("long"), "string_tamanho", [
+        PrimitiveProperty[] str_properties;
+        str_properties ~= PrimitiveProperty("tamanho", createTypeInfo("long"), "string_tamanho", [
                 createTypeInfo("string")
             ], 1);
-        str_properties["substituir"] = PrimitiveProperty("substituir", createTypeInfo("string"), "string_substituir", [
+        str_properties ~= PrimitiveProperty("substituir", createTypeInfo("string"), "string_substituir", [
                 createTypeInfo("string"), createTypeInfo("string"),
                 createTypeInfo("string")
             ], 1);
-        str_properties["dividir"] = PrimitiveProperty("dividir", createArrayType(TypesNative.STRING), "string_dividir",
+        str_properties ~= PrimitiveProperty("dividir", createArrayType(TypesNative.STRING), "string_dividir",
             [
                 createTypeInfo("string"), createTypeInfo("string")
             ], 1);
@@ -84,34 +71,64 @@ public:
         primitives["string"] = str;
 
         // Long
-        PrimitiveProperty[string] long_properties;
-        long_properties["tamanho"] = PrimitiveProperty("tamanho", createTypeInfo("long"), "long_tamanho", [
+        PrimitiveProperty[] long_properties;
+        long_properties ~= PrimitiveProperty("tamanho", createTypeInfo("long"), "long_tamanho", [
                 createTypeInfo("long")
             ], 1);
         Primitive lng = Primitive("long", long_properties);
         primitives["long"] = lng;
 
         // Vetores
-        PrimitiveProperty[string] arr_properties;
-        arr_properties["tamanho"] = PrimitiveProperty("tamanho", createTypeInfo("long"), "array_tamanho", [
-                createArrayType(TypesNative.T)
-            ], 1);
-        arr_properties["adicionar"] = PrimitiveProperty("adicionar", createTypeInfo("void"), "array_adicionar", [
+        PrimitiveProperty[] arr_properties;
+        arr_properties ~= PrimitiveProperty("tamanho", createTypeInfo("long"), "array_tamanho", [
+                createArrayType(TypesNative.STRING)
+            ]);
+        arr_properties ~= PrimitiveProperty("adicionar", createTypeInfo("void"), "array_string_adicionar",
+            [
                 createArrayTypeRef(TypesNative.T),
                 createTypeInfo("string"),
+            ], 1);
+        arr_properties ~= PrimitiveProperty("adicionar", createTypeInfo("void"), "array_long_adicionar", [
+                createArrayTypeRef(TypesNative.T),
+                createTypeInfo("long"),
+            ], 1);
+        arr_properties ~= PrimitiveProperty("adicionar", createTypeInfo("void"), "array_double_adicionar", [
+                createArrayTypeRef(TypesNative.T),
+                createTypeInfo("double"),
             ], 1);
         Primitive arr = Primitive("array", arr_properties);
         primitives["array"] = arr;
     }
 
-    bool exists(string type)
+    bool exists(string type, FTypeInfo[] args)
     {
-        return type in primitives ? true : false;
+        if (type !in primitives)
+            return false;
+        foreach (PrimitiveProperty prop; primitives[type].properties)
+        {
+            if (prop.args[prop.ignore .. $] == args)
+                return true;
+        }
+        return false;
     }
 
-    Primitive get(string type)
+    bool exists(string type)
     {
-        return primitives[type];
+        return type !in primitives;
+    }
+
+    PrimitiveProperty get(string type, FTypeInfo[] args)
+    {
+        PrimitiveProperty fallback;
+        if (!exists(type, args))
+            return fallback;
+        foreach (PrimitiveProperty prop; primitives[type].properties)
+        {
+            if (prop.args[prop.ignore .. $] == args)
+                return prop;
+            fallback = prop;
+        }
+        return fallback;
     }
 
     Primitive[string] get()
