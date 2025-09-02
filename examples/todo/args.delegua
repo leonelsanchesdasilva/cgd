@@ -1,3 +1,0 @@
-importar { escrevaln } de "io"
-
-escrevaln("Args: ", ARGS)

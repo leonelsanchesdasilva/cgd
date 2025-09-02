@@ -5,7 +5,7 @@ enum TypesNative : string
     STRING = "string",
     INT = "long",
     LONG = "long",
-    FLOAT = "float",
+    FLOAT = "double",
     BOOL = "bool",
     VOID = "void",
     CHAR = "char",

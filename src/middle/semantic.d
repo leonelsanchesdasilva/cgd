@@ -4,6 +4,8 @@ import std.string : toLower;
 import std.stdio;
 import std.conv;
 import std.format;
+import std.algorithm;
+import std.array;
 import std.typecons : Nullable;
 import middle.semantic_symbol_info;
 import middle.stdlib.function_builder;
@@ -37,7 +39,7 @@ public:
 
         // TODO: Criar uma classe para setar os módulos|libs
         // Vamos adicionar isso aqui temporariamente
-        StdLibModuleBuilder mod = new StdLibModuleBuilder("io")
+        StdLibModuleBuilder mod_io = new StdLibModuleBuilder("io")
             .defineFunction("escreva")
             .returns(createTypeInfo(TypesNative.NULL))
             .variadic()
@@ -47,7 +49,7 @@ public:
             .done()
 
             .defineFunction("leia")
-            .returns(createTypeInfo(TypesNative.NULL))
+            .returns(createTypeInfo(TypesNative.STRING))
             .customTargetType(createTypeInfo("string"))
             .withParams(createTypeInfo("string"))
             .libraryName("io_leia")
@@ -63,7 +65,17 @@ public:
             .generateDExternWithPragma()
             .done();
 
-        this.stdLibs["io"] = mod.moduleData;
+        StdLibModuleBuilder mod_type = new StdLibModuleBuilder("type")
+            .defineFunction("sdecimal")
+            .returns(createTypeInfo(TypesNative.FLOAT))
+            .customTargetType(createTypeInfo("double"))
+            .withParams(createTypeInfo("string"))
+            .libraryName("type_sdecimal")
+            .generateDExternWithPragma()
+            .done();
+
+        this.stdLibs["io"] = mod_io.moduleData;
+        this.stdLibs["type"] = mod_type.moduleData;
     }
 
     Program semantic(Program program)
@@ -103,95 +115,66 @@ private:
         switch (node.kind)
         {
         case NodeType.FunctionDeclaration:
-            analyzedNode = this.analyzeFnDeclaration(cast(FunctionDeclaration) node);
-            break;
+            return this.analyzeFnDeclaration(cast(FunctionDeclaration) node);
         case NodeType.VariableDeclaration:
-            analyzedNode = this.analyzeVarDeclaration(cast(VariableDeclaration) node);
-            break;
+            return this.analyzeVarDeclaration(cast(VariableDeclaration) node);
         case NodeType.UninitializedVariableDeclaration:
-            analyzedNode = this.analyzeUninitializedVarDeclaration(
+            return this.analyzeUninitializedVarDeclaration(
                 cast(UninitializedVariableDeclaration) node);
-            break;
         case NodeType.MultipleVariableDeclaration:
-            analyzedNode = this.analyzeMultipleVarDeclaration(
+            return this.analyzeMultipleVarDeclaration(
                 cast(MultipleVariableDeclaration) node);
-            break;
         case NodeType.MultipleUninitializedVariableDeclaration:
-            analyzedNode = this.analyzeMultipleUninitializedVariableDeclaration(
+            return this.analyzeMultipleUninitializedVariableDeclaration(
                 cast(MultipleUninitializedVariableDeclaration) node);
-            break;
         case NodeType.BinaryExpr:
-            analyzedNode = this.analyzeBinaryExpr(cast(BinaryExpr) node);
-            break;
+            return this.analyzeBinaryExpr(cast(BinaryExpr) node);
         case NodeType.Identifier:
-            analyzedNode = this.analyzeIdentifier(cast(Identifier) node);
-            break;
+            return this.analyzeIdentifier(cast(Identifier) node);
         case NodeType.ReturnStatement:
-            analyzedNode = this.analyzeReturnStatement(cast(ReturnStatement) node);
-            break;
+            return this.analyzeReturnStatement(cast(ReturnStatement) node);
         case NodeType.CallExpr:
-            analyzedNode = this.analyzeCallExpr(cast(CallExpr) node);
-            break;
+            return this.analyzeCallExpr(cast(CallExpr) node);
         case NodeType.IfStatement:
-            analyzedNode = this.analyzeIfStatement(cast(IfStatement) node);
-            break;
+            return this.analyzeIfStatement(cast(IfStatement) node);
         case NodeType.ElseStatement:
-            analyzedNode = this.analyzeElseStatement(cast(ElseStatement) node);
-            break;
+            return this.analyzeElseStatement(cast(ElseStatement) node);
         case NodeType.ForStatement:
-            analyzedNode = this.analyzeForStatement(cast(ForStatement) node);
-            break;
+            return this.analyzeForStatement(cast(ForStatement) node);
         case NodeType.WhileStatement:
-            analyzedNode = this.analyzeWhileStatement(cast(WhileStatement) node);
-            break;
+            return this.analyzeWhileStatement(cast(WhileStatement) node);
         case NodeType.DoWhileStatement:
-            analyzedNode = this.analyzeDoWhileStatement(cast(DoWhileStatement) node);
-            break;
+            return this.analyzeDoWhileStatement(cast(DoWhileStatement) node);
         case NodeType.AssignmentDeclaration:
-            analyzedNode = this.analyzeAssignmentDeclaration(cast(AssignmentDeclaration) node);
-            break;
+            return this.analyzeAssignmentDeclaration(cast(AssignmentDeclaration) node);
         case NodeType.UnaryExpr:
-            analyzedNode = analyzeUnaryExpr(cast(UnaryExpr) node);
-            break;
+            return analyzeUnaryExpr(cast(UnaryExpr) node);
         case NodeType.MemberCallExpr:
-            analyzedNode = this.analyzeMemberCallExpr(cast(MemberCallExpr) node);
-            break;
+            return this.analyzeMemberCallExpr(cast(MemberCallExpr) node);
         case NodeType.SwitchStatement:
-            analyzedNode = this.analyzeSwitchStatement(cast(SwitchStatement) node);
-            break;
+            return this.analyzeSwitchStatement(cast(SwitchStatement) node);
         case NodeType.CaseStatement:
-            analyzedNode = this.analyzeCaseStatement(cast(CaseStatement) node);
-            break;
+            return this.analyzeCaseStatement(cast(CaseStatement) node);
         case NodeType.DefaultStatement:
-            analyzedNode = this.analyzeDefaultStatement(cast(DefaultStatement) node);
-            break;
+            return this.analyzeDefaultStatement(cast(DefaultStatement) node);
         case NodeType.BreakStatement:
-            analyzedNode = this.analyzeBreakStatement(cast(BreakStatement) node);
-            break;
+            return this.analyzeBreakStatement(cast(BreakStatement) node);
         case NodeType.ImportStatement:
-            analyzedNode = this.analyzeImportStatement(cast(ImportStatement) node);
-            break;
+            return this.analyzeImportStatement(cast(ImportStatement) node);
         case NodeType.ClassDeclaration:
-            analyzedNode = this.analyzeClassDeclaration(cast(ClassDeclaration) node);
-            break;
+            return this.analyzeClassDeclaration(cast(ClassDeclaration) node);
         case NodeType.ConstructorDeclaration:
-            analyzedNode = this.analyzeConstructorDeclaration(cast(ConstructorDeclaration) node);
-            break;
+            return this.analyzeConstructorDeclaration(cast(ConstructorDeclaration) node);
         case NodeType.DestructorDeclaration:
-            analyzedNode = this.analyzeDestructorDeclaration(cast(DestructorDeclaration) node);
-            break;
+            return this.analyzeDestructorDeclaration(cast(DestructorDeclaration) node);
         case NodeType.NewExpr:
-            analyzedNode = this.analyzeNewExpr(cast(NewExpr) node);
-            break;
+            return this.analyzeNewExpr(cast(NewExpr) node);
         case NodeType.ThisExpr:
-            analyzedNode = this.analyzeThisExpr(cast(ThisExpr) node);
-            break;
+            return this.analyzeThisExpr(cast(ThisExpr) node);
         case NodeType.IndexExpr:
-            analyzedNode = this.analyzeIndexExpr(cast(IndexExpr) node);
-            break;
+            return this.analyzeIndexExpr(cast(IndexExpr) node);
         case NodeType.IndexExprAssignment:
-            analyzedNode = this.analyzeIndexExprAssignment(cast(IndexExprAssignment) node);
-            break;
+            return this.analyzeIndexExprAssignment(cast(IndexExprAssignment) node);
 
         case NodeType.StringLiteral:
         case NodeType.IntLiteral:
@@ -202,12 +185,10 @@ private:
             analyzedNode = node;
             string baseType = this.typeChecker.getTypeStringFromNative(analyzedNode.type.baseType);
             analyzedNode.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
-            break;
-
+            return analyzedNode;
         default:
             throw new Exception(format("Nó desconhecido '%s'.", to!string(node.kind)));
         }
-        return analyzedNode;
     }
 
     IndexExprAssignment analyzeIndexExprAssignment(IndexExprAssignment node)
@@ -487,11 +468,13 @@ private:
         if (node.object.type.isArray)
             objectType = "array";
 
-        if (!primitive.exists(objectType) || memberId !in primitive.get(objectType).properties)
+        FTypeInfo[] args = node.args.map!(x => x.type).array;
+
+        if (!primitive.exists(objectType, args))
             return;
 
-        auto primitiveType = primitive.get(objectType);
-        auto method = primitiveType.properties[memberId];
+        auto primitiveType = primitive.get(objectType, args);
+        auto method = primitiveType;
 
         // Valida número de argumentos
         long expectedArgsCount = method.args.length - method.ignore;
@@ -532,11 +515,12 @@ private:
     {
         string memberId = node.member.value.get!string;
         string objectType = cast(string) node.object.type.baseType;
+        FTypeInfo[] args = node.args.map!(x => x.type).array;
 
         // Verifica se é um membro de tipo primitivo
-        if (primitive.exists(objectType) && memberId in primitive.get(objectType).properties)
+        if (primitive.exists(objectType, args))
         {
-            return primitive.get(objectType).properties[memberId].type;
+            return primitive.get(objectType, args).type;
         }
 
         if (node.object.type.baseType == TypesNative.CLASS)
@@ -736,6 +720,15 @@ private:
             {
                 finalType = node.commonType;
 
+                if (analyzedValue.type.baseType == TypesNative.VOID)
+                    analyzedValue.type = finalType;
+
+                if (node.commonType.baseType == TypesNative.VOID)
+                {
+                    node.commonType = analyzedValue.type;
+                    finalType = node.commonType;
+                }
+
                 string valueTypeStr = this.typeChecker.getTypeStringFromNative(
                     analyzedValue.type.baseType);
                 string commonTypeStr = this.typeChecker.getTypeStringFromNative(
@@ -859,6 +852,12 @@ private:
 
         node.id = cast(Identifier) this.analyzeIdentifier(node.id);
         node.value = this.analyzeNode(node.value.get!Stmt);
+
+        if (node.value.get!Stmt.type.baseType == TypesNative.VOID)
+            node.value.get!Stmt.type = node.type;
+
+        if (node.type.baseType == TypesNative.VOID)
+            node.type = node.value.get!Stmt.type;
 
         return node;
     }
@@ -1224,10 +1223,14 @@ private:
         Stmt analyzedValue = this.analyzeNode(node.value.get!Stmt);
         node.value = analyzedValue;
 
+        if (node.value.get!Stmt.type.baseType == TypesNative.VOID)
+            node.value.get!Stmt.type = node.type;
+
+        if (node.type.baseType == TypesNative.VOID)
+            node.type = node.value.get!Stmt.type;
+
         // TODO: validar os tipos
 
-        string baseType = this.typeChecker.getTypeStringFromNative(analyzedValue.type.baseType);
-        node.type.baseType = stringToTypesNative(this.typeChecker.mapToDType(baseType));
         node.type.className = analyzedValue.type.className;
         node.type.isArray = analyzedValue.type.isArray;
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
