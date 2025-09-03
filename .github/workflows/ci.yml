@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        dc: [dmd-latest, ldc-latest]
+        dc: [ldc-latest]
 
     steps:
     - name: Checkout code
@@ -26,7 +26,6 @@ jobs:
 
     - name: Print D compiler version
       run: |
-        dmd --version || true
         ldc2 --version || true
         dub --version
 
