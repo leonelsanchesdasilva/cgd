@@ -45,16 +45,13 @@ jobs:
       run: dub build --build=debug
 
     - name: Build project (release)
-      run: dub build --build=release
+      run: dub build --build=release-fast
 
     - name: Run unit tests
       run: |
         echo "=== Executando Unit Tests ==="
         dub build --config=unittest --build=unittest
         dub run --config=unittest --build=unittest
-
-    - name: Test dub test command
-      run: dub test
 
     - name: Build with different compilers (if matrix)
       run: |
