@@ -1229,8 +1229,6 @@ private:
         if (node.type.baseType == TypesNative.VOID)
             node.type = node.value.get!Stmt.type;
 
-        // TODO: validar os tipos
-
         node.type.className = analyzedValue.type.className;
         node.type.isArray = analyzedValue.type.isArray;
         this.addSymbol(id, SymbolInfo(id, node.type, true, true, node.loc));
