@@ -687,3 +687,122 @@ public:
         }
     }
 }
+
+unittest
+{
+    writeln("Testando Lexer básico...");
+
+    auto error = new DiagnosticError();
+    auto lexer = new Lexer("test.delegua", "", ".", error);
+
+    assert(lexer !is null);
+
+    writeln("✓ Teste de criação do Lexer passou!");
+}
+
+unittest
+{
+    writeln("Testando tokenização básica...");
+
+    auto error = new DiagnosticError();
+    auto lexer = new Lexer("test.delegua", "var x = 42;", ".", error);
+    auto tokens = lexer.tokenize();
+
+    assert(tokens.length >= 6);
+    assert(tokens[0].kind == TokenType.VAR);
+    assert(tokens[1].kind == TokenType.IDENTIFIER);
+    assert(tokens[1].value.get!string == "x");
+    assert(tokens[2].kind == TokenType.EQUALS);
+    assert(tokens[3].kind == TokenType.INT);
+    assert(tokens[3].value.get!long == 42);
+    assert(tokens[4].kind == TokenType.SEMICOLON);
+    assert(tokens[$-1].kind == TokenType.EOF);
+
+    writeln("✓ Teste de tokenização básica passou!");
+}
+
+unittest
+{
+    writeln("Testando tokenização de strings...");
+
+    auto error = new DiagnosticError();
+    auto lexer = new Lexer("test.delegua", `"hello world"`, ".", error);
+    auto tokens = lexer.tokenize();
+
+    assert(tokens.length == 2);
+    assert(tokens[0].kind == TokenType.STRING);
+    assert(tokens[0].value.get!string == "hello world");
+    assert(tokens[1].kind == TokenType.EOF);
+
+    writeln("✓ Teste de tokenização de strings passou!");
+}
+
+unittest
+{
+    writeln("Testando tokenização de números...");
+
+    auto error = new DiagnosticError();
+
+    // Teste número inteiro
+    auto lexer1 = new Lexer("test.delegua", "123", ".", error);
+    auto tokens1 = lexer1.tokenize();
+    assert(tokens1.length == 2);
+    assert(tokens1[0].kind == TokenType.INT);
+    assert(tokens1[0].value.get!long == 123);
+
+    // Teste número float - vou verificar primeiro o tipo retornado
+    auto lexer2 = new Lexer("test.delegua", "12.34", ".", error);
+    auto tokens2 = lexer2.tokenize();
+    assert(tokens2.length == 2);
+    assert(tokens2[0].kind == TokenType.FLOAT);
+    // Como pode ser string ou double, vou verificar se é um valor numérico válido
+    // usando conversão segura
+    if (tokens2[0].value.type == typeid(string)) {
+        import std.conv : to;
+        double val = tokens2[0].value.get!string.to!double;
+        assert(val == 12.34);
+    } else {
+        assert(tokens2[0].value.get!double == 12.34);
+    }
+
+    writeln("✓ Teste de tokenização de números passou!");
+}
+
+unittest
+{
+    writeln("Testando keywords em português...");
+
+    auto error = new DiagnosticError();
+    auto lexer = new Lexer("test.delegua", "se verdadeiro então", ".", error);
+    auto tokens = lexer.tokenize();
+
+    assert(tokens.length == 4);
+    assert(tokens[0].kind == TokenType.SE);
+    assert(tokens[1].kind == TokenType.TRUE);
+    assert(tokens[2].kind == TokenType.IDENTIFIER);
+    assert(tokens[3].kind == TokenType.EOF);
+
+    writeln("✓ Teste de keywords em português passou!");
+}
+
+unittest
+{
+    writeln("Testando operadores...");
+
+    auto error = new DiagnosticError();
+    auto lexer = new Lexer("test.delegua", "+ - * / == != >= <=", ".", error);
+    auto tokens = lexer.tokenize();
+
+    assert(tokens.length == 9);
+    assert(tokens[0].kind == TokenType.PLUS);
+    assert(tokens[1].kind == TokenType.MINUS);
+    assert(tokens[2].kind == TokenType.ASTERISK);
+    assert(tokens[3].kind == TokenType.SLASH);
+    assert(tokens[4].kind == TokenType.EQUALS_EQUALS);
+    assert(tokens[5].kind == TokenType.NOT_EQUALS);
+    assert(tokens[6].kind == TokenType.GREATER_THAN_OR_EQUALS);
+    assert(tokens[7].kind == TokenType.LESS_THAN_OR_EQUALS);
+    assert(tokens[8].kind == TokenType.EOF);
+
+    writeln("✓ Teste de operadores passou!");
+}

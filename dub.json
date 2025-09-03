@@ -1,6 +1,7 @@
 {
 	"authors": [
-		"Fernando Dev"
+		"Fernando Dev",
+		"Italo Brito Brandão"
 	],
 	"copyright": "Copyright © 2025, Fernando Dev",
 	"description": "Compilador Geral Delégua",
@@ -32,6 +33,9 @@
 				"-boundscheck=off"
 			],
 			"dflags-gdc": ["-O3", "-frelease", "-fbounds-check=off"]
+		},
+		"unittest": {
+			"dflags-ldc": ["-g", "-O0", "-unittest"]
 		}
 	}
 }
