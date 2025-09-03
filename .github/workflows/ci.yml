@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        dc: [dmd-latest, ldc-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install D compiler
+      uses: dlang-community/setup-dlang@v1
+      with:
+        compiler: ${{ matrix.dc }}
+
+    - name: Print D compiler version
+      run: |
+        dmd --version || true
+        ldc2 --version || true
+        dub --version
+
+    - name: Cache DUB dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.dub
+        key: ${{ runner.os }}-dub-${{ hashFiles('**/dub.json', '**/dub.selections.json') }}
+        restore-keys: |
+          ${{ runner.os }}-dub-
+
+    - name: Install dependencies
+      run: dub upgrade
+
+    - name: Build project (debug)
+      run: dub build --build=debug
+
+    - name: Build project (release)
+      run: dub build --build=release
+
+    - name: Run unit tests
+      run: |
+        echo "=== Executando Unit Tests ==="
+        dub build --config=unittest --build=unittest
+        dub run --config=unittest --build=unittest
+
+    - name: Test dub test command
+      run: dub test
+
+    - name: Build with different compilers (if matrix)
+      run: |
+        echo "=== Testing with ${{ matrix.dc }} ==="
+        dub --version
+        dub build --compiler=${{ matrix.dc }} || dub build
