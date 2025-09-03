@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [ master, dev ]
   pull_request:
-    branches: [ master, main, develop ]
+    branches: [ master, dev ]
 
 jobs:
   test:
     name: Run Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     strategy:
       matrix:

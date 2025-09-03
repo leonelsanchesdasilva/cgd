@@ -1,4 +1,5 @@
 importar { escrevaln } de "io"
 
-var name = 'Fernando'
+var name = "Fernando"
 escrevaln('Criado por: ', name)
+
