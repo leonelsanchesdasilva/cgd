@@ -1,5 +1,7 @@
 module frontend.parser.ast;
 
+import std.stdio;
+import frontend.lexer.token : Loc;
 import frontend.values;
 import frontend.lexer.token;
 import middle.semantic_symbol_info;
@@ -824,4 +826,101 @@ class IndexExprAssignment : Stmt
         this.value = value;
         this.loc = loc;
     }
+}
+
+unittest
+{
+    writeln("Testando criação de AST nodes...");
+
+    auto loc = Loc("test.d", 1, 1, 5, ".");
+    auto intLit = new IntLiteral(42, loc);
+    assert(intLit.kind == NodeType.IntLiteral);
+    assert(intLit.value.get!long == 42);
+    assert(intLit.loc.line == 1);
+    assert(intLit.loc.file == "test.d");
+
+    writeln("✓ Teste de IntLiteral passou!");
+}
+
+unittest
+{
+    writeln("Testando criação de BinaryExpr...");
+
+    auto loc = Loc("test.d", 1, 1, 5, ".");
+    auto left = new IntLiteral(10, loc);
+    auto right = new IntLiteral(20, loc);
+    auto binExpr = new BinaryExpr(left, right, "+", loc);
+
+    assert(binExpr.kind == NodeType.BinaryExpr);
+    assert(binExpr.left == left);
+    assert(binExpr.right == right);
+    assert(binExpr.op == "+");
+    assert(binExpr.loc.line == 1);
+
+    writeln("✓ Teste de BinaryExpr passou!");
+}
+
+unittest
+{
+    writeln("Testando criação de Identifier...");
+
+    auto loc = Loc("test.d", 1, 1, 5, ".");
+    auto ident = new Identifier("variavel", loc);
+
+    assert(ident.kind == NodeType.Identifier);
+    assert(ident.value.get!string == "variavel");
+    assert(ident.loc.line == 1);
+    assert(ident.loc.start == 1);
+
+    writeln("✓ Teste de Identifier passou!");
+}
+
+unittest
+{
+    writeln("Testando criação de Program...");
+
+    auto loc = Loc("test.d", 1, 1, 5, ".");
+    auto stmt1 = new IntLiteral(1, loc);
+    auto stmt2 = new IntLiteral(2, loc);
+    Stmt[] stmts = [stmt1, stmt2];
+
+    auto program = new Program(stmts);
+
+    assert(program.kind == NodeType.Program);
+    assert(program.body.length == 2);
+    assert(program.body[0] == stmt1);
+    assert(program.body[1] == stmt2);
+
+    writeln("✓ Teste de Program passou!");
+}
+
+unittest
+{
+    writeln("Testando criação de StringLiteral...");
+
+    auto loc = Loc("test.d", 2, 1, 5, ".");
+    auto strLit = new StringLiteral("hello", loc);
+
+    assert(strLit.kind == NodeType.StringLiteral);
+    assert(strLit.value.get!string == "hello");
+    assert(strLit.loc.line == 2);
+    assert(strLit.loc.start == 1);
+
+    writeln("✓ Teste de StringLiteral passou!");
+}
+
+unittest
+{
+    writeln("Testando criação de BoolLiteral...");
+
+    auto loc = Loc("test.d", 1, 1, 5, ".");
+    auto boolLit = new BoolLiteral(true, loc);
+
+    assert(boolLit.kind == NodeType.BoolLiteral);
+    assert(boolLit.value.get!bool == true);
+
+    auto boolLit2 = new BoolLiteral(false, loc);
+    assert(boolLit2.value.get!bool == false);
+
+    writeln("✓ Teste de BoolLiteral passou!");
 }
