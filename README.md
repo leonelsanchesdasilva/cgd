@@ -2,7 +2,7 @@
   <img src="docs/assets/logo.png" width="150" alt="cgd logo"/>
 </p>
 
-[![Versão](https://img.shields.io/badge/versão-v0.0.6-blue.svg)](https://github.com/fernandothedev/cgd)
+[![Versão](https://img.shields.io/badge/versão-v0.1.0-blue.svg)](https://github.com/fernandothedev/cgd)
 
 # CGD - Compilador Geral Delégua
 
@@ -16,7 +16,7 @@ Compilador para a linguagem de programação [Delegua](https://github.com/Design
 
 ```bash
 # Linux/macOS - Instalação automática
-curl -fsSL https://github.com/FernandoTheDev/cgd/raw/refs/heads/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/FernandoTheDev/cgd/refs/heads/master/install.sh | sh
 
 # Verificar instalação
 cgd --help
@@ -190,7 +190,6 @@ Iniciado: 11 de agosto de 2025
 - [X] Comentários (`//`)
 - [ ] Generics/Templates
 - [ ] Pattern matching
-- [ ] Async/await
 - [ ] Memory management customizado
 
 #### **Ferramentas**
@@ -198,9 +197,9 @@ Iniciado: 11 de agosto de 2025
 - [X] Compilação (`cgd compilar`)
 - [X] Transpilação (`cgd transpilar`)
 - [X] Benchmarking integrado
-- [ ] Debugger
-- [ ] Formatter
-- [ ] LSP (Language Server Protocol)
+- [X] Debugger
+- [X] Formatter
+- [X] LSP (Language Server Protocol)
 
 ### Próximos passos
 

@@ -98,7 +98,7 @@ dub --version
 
 ```bash
 # Instalar CGD automaticamente
-curl -fsSL https://raw.githubusercontent.com/FernandoTheDev/cgd/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/FernandoTheDev/cgd/refs/heads/master/install.sh | sh
 
 # Verificar instalação
 cgd --help
@@ -113,7 +113,7 @@ cgd --help
 
 ```bash
 # 1. Clonar o repositório
-git clone https://github.com/FernandoTheDev/cgd.git
+git clone https://github.com/fernandothedev/cgd.git
 cd cgd
 
 # 2. Compilar o CGD com otimizações
