@@ -11,12 +11,12 @@
 	"buildTypes": {
 		"debug": {
 			"dflags-dmd": ["-g", "-debug"],
-			"dflags-ldc": ["-g", "-O0"],
+			"dflags-ldc": ["-g", "-O0", "-wi"],
 			"dflags-gdc": ["-g", "-O0"]
 		},
 		"release": {
 			"dflags-dmd": ["-O", "-release", "-inline"],
-			"dflags-ldc": ["-O2", "-release", "-enable-inlining"],
+			"dflags-ldc": ["-O2", "-release", "-enable-inlining", "-wi"],
 			"dflags-gdc": ["-O2", "-frelease"]
 		},
 		"release-fast": {
@@ -30,12 +30,13 @@
 				"-O3",
 				"-release",
 				"-enable-inlining",
-				"-boundscheck=off"
+				"-boundscheck=off",
+				"-wi"
 			],
 			"dflags-gdc": ["-O3", "-frelease", "-fbounds-check=off"]
 		},
 		"unittest": {
-			"dflags-ldc": ["-g", "-O0", "-unittest"]
+			"dflags-ldc": ["-g", "-O0", "-unittest", "-wi"]
 		}
 	}
 }
