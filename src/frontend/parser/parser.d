@@ -1324,7 +1324,7 @@ private:
     }
 
 public:
-    this(Token[] tokens = [], DiagnosticError e)
+    this(Token[] tokens = [], DiagnosticError e = DiagnosticError.init)
     {
         this.error = e;
         this.tokens = tokens;

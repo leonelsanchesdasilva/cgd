@@ -20,7 +20,7 @@ alias fileWrite = std.file.write;
 
 string HOME, MAIN_DIR, STDLIB_DIR;
 
-enum string VERSAO = "v0.0.6";
+enum string VERSAO = "v0.1.0";
 enum string NOME_PROGRAMA = "cgd";
 enum string NOME_COMPLETO = "Compilador Geral Delégua";
 
@@ -54,11 +54,11 @@ void main(string[] args)
 	try
 	{
 		getopt(args,
-			"o|output", "Especifica o arquivo de saída", &arquivoSaida,
-			"v|version", "Mostra a versão do compilador", &mostrarVersao,
-			"0|optimize", "Aplica otimizações ao código", &bigO,
-			"h|help", "Mostra esta mensagem de ajuda", &mostrarAjuda,
-			"verbose", "Modo verboso - mostra informações detalhadas", &verboso
+			"s|saida", "Especifica o arquivo de saída", &arquivoSaida,
+			"v|versao", "Mostra a versão do compilador", &mostrarVersao,
+			"0|otimizar", "Aplica otimizações ao código", &bigO,
+			"a|ajuda", "Mostra esta mensagem de ajuda", &mostrarAjuda,
+			"verboso", "Modo verboso - mostra informações detalhadas", &verboso
 		);
 
 		if (mostrarVersao)
@@ -133,7 +133,7 @@ void main(string[] args)
 	catch (GetOptException e)
 	{
 		writefln("cgd: erro: %s", e.msg);
-		writeln("Digite 'cgd --help' para mais informações.");
+		writeln("Digite 'cgd --ajuda' para mais informações.");
 	}
 	catch (Exception e)
 	{
@@ -151,7 +151,7 @@ void executarAtualizacao(bool verboso)
 	try
 	{
 		UpdaterConfig config = UpdaterConfig(verboso, false, true, "");
-		Updater updater = new Updater("FernandoTheDev", "cgd", VERSAO, config);
+		Updater updater = new Updater("fernandothedev", "cgd", VERSAO, config);
 		updater.performUpdate();
 	}
 	catch (Exception e)
@@ -175,16 +175,16 @@ void mostrarMensagemAjuda()
 	writeln("  atualizar   Verifica e instala atualizações do compilador");
 	writeln("");
 	writeln("Opções:");
-	writeln("  -o, --output ARQUIVO  Especifica o arquivo de saída");
-	writeln("  -v, --version         Mostra a versão do compilador");
-	writeln("  -h, --help            Mostra esta mensagem de ajuda");
-	writeln("  -0, --optimize        Aplica otimizações ao código");
-	writeln("  --verbose             Modo verboso - mostra informações detalhadas");
+	writeln("  -s, --saida ARQUIVO  Especifica o arquivo de saída");
+	writeln("  -v, --versao         Mostra a versão do compilador");
+	writeln("  -a, --ajuda          Mostra esta mensagem de ajuda");
+	writeln("  -0, --otimizar       Aplica otimizações ao código");
+	writeln("  --verboso            Modo verboso - mostra informações detalhadas");
 	writeln("");
 	writeln("Exemplos:");
 	writeln("  cgd compilar arquivo.delegua");
-	writeln("  cgd transpilar arquivo.delegua -o saida.d");
-	writeln("  cgd compilar arquivo.delegua --output meuapp");
+	writeln("  cgd transpilar arquivo.delegua -s saida.d");
+	writeln("  cgd compilar arquivo.delegua --saida meuapp");
 	writeln("  cgd atualizar --verbose");
 	writeln("");
 	mostrarCopyright();

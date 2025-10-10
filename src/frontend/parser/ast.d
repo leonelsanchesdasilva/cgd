@@ -788,7 +788,7 @@ class ImportStatement : Stmt
     string from; // lib|file.delegua
     string _alias;
 
-    this(string from, string _alias = "", Identifier[] targets = [], Loc loc)
+    this(string from, string _alias = "", Identifier[] targets = [], Loc loc = Loc.init)
     {
         this.kind = NodeType.ImportStatement;
         this.value = null;
