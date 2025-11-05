@@ -24,68 +24,71 @@ private:
     Token[] tokens = [];
 
     // Estaticos e imutaveis
-    static immutable TokenType[string] SINGLE_CHAR_TOKENS = initSingleCharTokens();
-    static immutable TokenType[string] MULTI_CHAR_TOKENS = initMultiCharTokens();
-    static immutable bool[char] ALPHA_CHARS = initCharSet(
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_áÁãÃâÂàÀéÉêÊíÍóÓõÕôÔúÚçÇ");
-    static immutable bool[char] DIGIT_CHARS = initCharSet("0123456789");
-    static immutable bool[char] HEX_CHARS = initCharSet("0123456789abcdefABCDEF");
-    static immutable bool[char] OCTAL_CHARS = initCharSet("01234567");
-    static immutable bool[char] BINARY_CHARS = initCharSet("01");
-    static immutable bool[char] WHITESPACE_CHARS = initCharSet(" \t\r");
+    static TokenType[string] SINGLE_CHAR_TOKENS;
+    static TokenType[string] MULTI_CHAR_TOKENS;
+    
+    // VARIÁVEIS MODIFICADAS PARA PERMITIR INICIALIZAÇÃO EM shared static this()
+    static bool[char] ALPHA_CHARS;
+    static bool[char] DIGIT_CHARS;
+    static bool[char] HEX_CHARS;
+    static bool[char] OCTAL_CHARS;
+    static bool[char] BINARY_CHARS;
+    static bool[char] WHITESPACE_CHARS;
 
-    static TokenType[string] initSingleCharTokens()
+    shared static this()
     {
-        TokenType[string] m;
-        m["+"] = TokenType.PLUS;
-        m["-"] = TokenType.MINUS;
-        m["*"] = TokenType.ASTERISK;
-        m["/"] = TokenType.SLASH;
-        m[">"] = TokenType.GREATER_THAN;
-        m["<"] = TokenType.LESS_THAN;
-        m[","] = TokenType.COMMA;
-        m[";"] = TokenType.SEMICOLON;
-        m[":"] = TokenType.COLON;
-        m["("] = TokenType.LPAREN;
-        m[")"] = TokenType.RPAREN;
-        m["{"] = TokenType.LBRACE;
-        m["}"] = TokenType.RBRACE;
-        m["."] = TokenType.DOT;
-        m["%"] = TokenType.MODULO;
-        m["="] = TokenType.EQUALS;
-        m["["] = TokenType.LBRACKET;
-        m["]"] = TokenType.RBRACKET;
-        m["!"] = TokenType.BANG;
-        m["?"] = TokenType.QUESTION;
-        m["&"] = TokenType.BIT_AND;
-        m["|"] = TokenType.BIT_OR;
-        m["^"] = TokenType.BIT_XOR;
-        m["~"] = TokenType.BIT_NOT;
-        return m;
-    }
+        SINGLE_CHAR_TOKENS["+"] = TokenType.PLUS;
+        SINGLE_CHAR_TOKENS["-"] = TokenType.MINUS;
+        SINGLE_CHAR_TOKENS["*"] = TokenType.ASTERISK;
+        SINGLE_CHAR_TOKENS["/"] = TokenType.SLASH;
+        SINGLE_CHAR_TOKENS[">"] = TokenType.GREATER_THAN;
+        SINGLE_CHAR_TOKENS["<"] = TokenType.LESS_THAN;
+        SINGLE_CHAR_TOKENS[","] = TokenType.COMMA;
+        SINGLE_CHAR_TOKENS[";"] = TokenType.SEMICOLON;
+        SINGLE_CHAR_TOKENS[":"] = TokenType.COLON;
+        SINGLE_CHAR_TOKENS["("] = TokenType.LPAREN;
+        SINGLE_CHAR_TOKENS[")"] = TokenType.RPAREN;
+        SINGLE_CHAR_TOKENS["{"] = TokenType.LBRACE;
+        SINGLE_CHAR_TOKENS["}"] = TokenType.RBRACE;
+        SINGLE_CHAR_TOKENS["."] = TokenType.DOT;
+        SINGLE_CHAR_TOKENS["%"] = TokenType.MODULO;
+        SINGLE_CHAR_TOKENS["="] = TokenType.EQUALS;
+        SINGLE_CHAR_TOKENS["["] = TokenType.LBRACKET;
+        SINGLE_CHAR_TOKENS["]"] = TokenType.RBRACKET;
+        SINGLE_CHAR_TOKENS["!"] = TokenType.BANG;
+        SINGLE_CHAR_TOKENS["?"] = TokenType.QUESTION;
+        SINGLE_CHAR_TOKENS["&"] = TokenType.BIT_AND;
+        SINGLE_CHAR_TOKENS["|"] = TokenType.BIT_OR;
+        SINGLE_CHAR_TOKENS["^"] = TokenType.BIT_XOR;
+        SINGLE_CHAR_TOKENS["~"] = TokenType.BIT_NOT;
 
-    static TokenType[string] initMultiCharTokens()
-    {
-        TokenType[string] m;
-        m["++"] = TokenType.INCREMENT;
-        m["--"] = TokenType.DECREMENT;
-        m["**"] = TokenType.EXPONENTIATION;
-        m["%%"] = TokenType.REMAINDER;
-        m["=="] = TokenType.EQUALS_EQUALS;
-        m[">="] = TokenType.GREATER_THAN_OR_EQUALS;
-        m["<="] = TokenType.LESS_THAN_OR_EQUALS;
-        m["&&"] = TokenType.AND;
-        m["||"] = TokenType.OR;
-        m["!="] = TokenType.NOT_EQUALS;
-        m[".."] = TokenType.RANGE;
-        m["<<"] = TokenType.LEFT_SHIFT;
-        m[">>"] = TokenType.RIGHT_SHIFT;
-        m["&="] = TokenType.BIT_AND_ASSIGN;
-        m["|="] = TokenType.BIT_OR_ASSIGN;
-        m["^="] = TokenType.BIT_XOR_ASSIGN;
-        m["<<="] = TokenType.LEFT_SHIFT_ASSIGN;
-        m[">>="] = TokenType.RIGHT_SHIFT_ASSIGN;
-        return m;
+        MULTI_CHAR_TOKENS["++"] = TokenType.INCREMENT;
+        MULTI_CHAR_TOKENS["--"] = TokenType.DECREMENT;
+        MULTI_CHAR_TOKENS["**"] = TokenType.EXPONENTIATION;
+        MULTI_CHAR_TOKENS["%%"] = TokenType.REMAINDER;
+        MULTI_CHAR_TOKENS["=="] = TokenType.EQUALS_EQUALS;
+        MULTI_CHAR_TOKENS[">="] = TokenType.GREATER_THAN_OR_EQUALS;
+        MULTI_CHAR_TOKENS["<="] = TokenType.LESS_THAN_OR_EQUALS;
+        MULTI_CHAR_TOKENS["&&"] = TokenType.AND;
+        MULTI_CHAR_TOKENS["||"] = TokenType.OR;
+        MULTI_CHAR_TOKENS["!="] = TokenType.NOT_EQUALS;
+        MULTI_CHAR_TOKENS[".."] = TokenType.RANGE;
+        MULTI_CHAR_TOKENS["<<"] = TokenType.LEFT_SHIFT;
+        MULTI_CHAR_TOKENS[">>"] = TokenType.RIGHT_SHIFT;
+        MULTI_CHAR_TOKENS["&="] = TokenType.BIT_AND_ASSIGN;
+        MULTI_CHAR_TOKENS["|="] = TokenType.BIT_OR_ASSIGN;
+        MULTI_CHAR_TOKENS["^="] = TokenType.BIT_XOR_ASSIGN;
+        MULTI_CHAR_TOKENS["<<="] = TokenType.LEFT_SHIFT_ASSIGN;
+        MULTI_CHAR_TOKENS[">>="] = TokenType.RIGHT_SHIFT_ASSIGN;
+
+        // INICIALIZAÇÃO DE CHARACTER SETS AQUI
+        ALPHA_CHARS = initCharSet(
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_áÁãÃâÂàÀéÉêÊíÍóÓõÕôÔúÚçÇ");
+        DIGIT_CHARS = initCharSet("0123456789");
+        HEX_CHARS = initCharSet("0123456789abcdefABCDEF");
+        OCTAL_CHARS = initCharSet("01234567");
+        BINARY_CHARS = initCharSet("01");
+        WHITESPACE_CHARS = initCharSet(" \t\r");
     }
 
     static bool[char] initCharSet(string chars)
@@ -117,9 +120,9 @@ private:
     )
     {
         error.addError(Diagnostic(message, loc, [
-                    error.makeSuggestion(
-                    suggestion)
-                ]));
+                        error.makeSuggestion(
+                        suggestion)
+                    ]));
         return;
     }
 
@@ -496,7 +499,8 @@ private:
 
         // Handle range operator (e.g., 123..456)
         if (
-            this.source[0 .. this.offset] == "..")
+            this.offset + 2 <= this.source.length &&
+            this.source[this.offset .. this.offset + 2] == "..")
         {
             this.createTokenWithLocation(
                 TokenType.INT,
@@ -504,10 +508,12 @@ private:
                 startPos,
                 number.length,
             );
-            this.createToken(TokenType.RANGE, Variant(
-                    ".."), 2);
+            this.offset += 2; // Avanca o ".."
+            this.createTokenWithLocation(TokenType.RANGE, Variant(
+                    ".."), startPos + number.length, 2);
             return;
         }
+
 
         // Handle floating point numbers
         if (this.offset < this.source.length && this
