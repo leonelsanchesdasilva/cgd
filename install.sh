@@ -16,7 +16,7 @@ NC='\033[0m'
 # Configurações
 REPO_URL="https://github.com/FernandoTheDev/cgd"
 INSTALL_DIR="$HOME/.local/bin"
-INSTALL_STDLIB_DIR="$HOME/.cgd/stdlib"
+INSTALL_STDLIB_DIR="$HOME/.cgd"
 SOURCE_DIR="/tmp/cgd-install"
 BINARY_NAME="cgd"
 
