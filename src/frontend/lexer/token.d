@@ -153,6 +153,7 @@ struct Token
 }
 
 TokenType[string] keywords;
+bool[string] typeKeywords;
 
 shared static this()
 {
@@ -212,6 +213,15 @@ shared static this()
     keywords["super"] = TokenType.SUPER;
     keywords["const"] = TokenType.CONST;
     keywords["exportar"] = TokenType.EXPORTAR;
+
+    // Initialize typeKeywords
+    typeKeywords["int"] = true;
+    typeKeywords["float"] = true;
+    typeKeywords["string"] = true;
+    typeKeywords["bool"] = true;
+    typeKeywords["void"] = true;
+    typeKeywords["null"] = true;
+    typeKeywords["vazio"] = true;
 }
 
 bool isTypeToken(Token token)
@@ -220,16 +230,6 @@ bool isTypeToken(Token token)
 
     if (token.kind != TokenType.IDENTIFIER)
         return false;
-
-    static immutable bool[string] typeKeywords = [
-        "int": true,
-        "float": true,
-        "string": true,
-        "bool": true,
-        "void": true,
-        "null": true,
-        "vazio": true, // void
-    ];
 
     try
     {
