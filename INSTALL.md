@@ -18,7 +18,7 @@ Para usar o CGD, você precisa ter instalado:
 sudo apt update -y
 
 # Instalar LDC e DUB
-sudo apt install -y ldc dub
+sudo apt install -y ldc dub llvm-dev llvm
 
 # Verificar instalação
 ldc2 --version
@@ -101,7 +101,7 @@ dub --version
 curl -fsSL https://raw.githubusercontent.com/FernandoTheDev/cgd/refs/heads/master/install.sh | sh
 
 # Verificar instalação
-cgd --help
+cgd --ajuda
 ```
 
 > **Nota:** O script automático irá:
@@ -120,7 +120,7 @@ cd cgd
 dub build --build=release-fast
 
 # 3. Testar o executável
-./cgd --help
+./cgd --ajuda
 
 # 4. (Opcional) Instalar no diretório local
 mkdir -p ~/.local/bin
@@ -208,7 +208,7 @@ brew install ldc dub
 # Se a versão do LDC nos repositórios for muito antiga
 sudo add-apt-repository ppa:dlang/ldc
 sudo apt update
-sudo apt install ldc dub
+sudo apt install ldc dub llvm-dev llvm
 ```
 
 #### macOS com Apple Silicon (M1/M2)
@@ -268,5 +268,5 @@ brew uninstall ldc dub
 Após a instalação, consulte:
 
 - [README.md](README.md) - Visão geral do projeto
-- `cgd --help` - Ajuda do comando
-- [Documentação da linguagem Delegua](https://github.com/DesignLiquido/delegua)
+- `cgd --ajuda` - Ajuda do comando
+- [Documentação da linguagem Delégua](https://github.com/DesignLiquido/delegua/wiki)

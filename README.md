@@ -15,11 +15,15 @@ Compilador para a linguagem de programação [Delegua](https://github.com/Design
 ### Instalação rápida
 
 ```bash
+# Pré-requisitos
+# Ubuntu
+sudo apt install llvm-dev llvm -y
+
 # Linux/macOS - Instalação automática
 curl -fsSL https://raw.githubusercontent.com/FernandoTheDev/cgd/refs/heads/master/install.sh | sh
 
 # Verificar instalação
-cgd --help
+cgd --ajuda
 ```
 
 ### Pré-requisitos
@@ -78,7 +82,7 @@ cgd compilar meu_programa.delegua
 cgd --optimize meu_programa.delegua
 
 # Ver ajuda completa
-cgd --help
+cgd --ajuda
 ```
 
 ## Plataformas suportadas
