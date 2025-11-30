@@ -84,7 +84,7 @@ void main(string[] args)
 		if (args.length < 3)
 		{
 			writeln("cgd: erro: arquivo não especificado");
-			writeln("Digite 'cgd --help' para mais informações.");
+			writeln("Digite 'cgd --ajuda' para mais informações.");
 			return;
 		}
 
@@ -94,7 +94,7 @@ void main(string[] args)
 		{
 			writefln("cgd: erro: comando desconhecido '%s'", comando);
 			writeln("Comandos disponíveis: compilar, transpilar, atualizar");
-			writeln("Digite 'cgd --help' para mais informações.");
+			writeln("Digite 'cgd --ajuda' para mais informações.");
 			return;
 		}
 
